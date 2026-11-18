@@ -78,6 +78,8 @@ alter table event_types add column if not exists brand_bg text not null default 
 alter table event_types add column if not exists brand_logo_url text not null default '';
 alter table event_types add column if not exists booking_account_id int references accounts(id) on delete set null;
 alter table event_types add column if not exists booking_calendar_id text;
+-- Extra calendars that get a silent copy of each booking: [{"account_id": 1, "calendar_id": "..."}]
+alter table event_types add column if not exists extra_calendars jsonb not null default '[]';
 
 create table if not exists waitlist (
   id serial primary key,
@@ -109,6 +111,7 @@ create table if not exists bookings (
   cancelled_at timestamptz
 );
 create index if not exists bookings_confirmed_time on bookings (block_start_at, block_end_at) where status = 'confirmed';
+alter table bookings add column if not exists extra_events jsonb not null default '[]';
 
 -- ---------- Multiple users ----------
 create table if not exists users (

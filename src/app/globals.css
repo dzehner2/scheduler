@@ -214,3 +214,72 @@ th { font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; color: 
 
 /* Owner dashboard: plain background, no confetti */
 .workspace { background: var(--bg); min-height: calc(100vh - 70px); }
+
+/* ---------- Company branding (per booking link) ----------
+   Set on a wrapper with --brand-primary, --brand-on-primary, --brand-dark, --brand-bg.
+   Replaces the 1980s look with a clean, business style. */
+.theme-brand {
+  --accent: var(--brand-primary);
+  --ink: var(--brand-dark);
+  --text: var(--brand-dark);
+  --muted: color-mix(in srgb, var(--brand-dark) 68%, white);
+  --line: color-mix(in srgb, var(--brand-dark) 14%, white);
+  --accent-soft: color-mix(in srgb, var(--brand-primary) 12%, white);
+  --ok: var(--brand-primary);
+  --ok-soft: color-mix(in srgb, var(--brand-primary) 12%, white);
+  --radius: 10px;
+  --shadow: 0 6px 24px rgba(0, 0, 0, 0.08);
+  --shadow-sm: none;
+  min-height: 100vh;
+  background: var(--brand-bg);
+  color: var(--text);
+}
+.theme-brand h1 { font-family: var(--font-body), Arial, sans-serif; font-weight: 700; font-size: 26px; }
+.theme-brand a { color: var(--brand-primary); text-decoration-thickness: 1px; }
+.theme-brand .card { border: 1px solid var(--line); }
+.theme-brand .btn {
+  background: var(--brand-primary);
+  color: var(--brand-on-primary);
+  border: 1px solid var(--brand-primary);
+  font-weight: 700;
+  letter-spacing: 0;
+}
+.theme-brand .btn:hover { color: var(--brand-on-primary); filter: brightness(0.94); }
+.theme-brand .btn:active:not(:disabled) { transform: none; }
+.theme-brand .btn.secondary, .theme-brand .btn.danger { background: #fff; color: var(--brand-primary); }
+.theme-brand .btn.secondary:hover { background: var(--accent-soft); color: var(--brand-primary); }
+.theme-brand .btn.danger { color: var(--danger); border-color: var(--danger); }
+.theme-brand .alert { border-width: 1px; }
+.theme-brand .alert.big { font-family: var(--font-body), Arial, sans-serif; font-weight: 700; font-size: 20px; }
+.theme-brand input, .theme-brand select, .theme-brand textarea { border: 1px solid var(--line); }
+.theme-brand input:focus, .theme-brand select:focus, .theme-brand textarea:focus,
+.theme-brand button:focus-visible, .theme-brand a:focus-visible { outline-color: var(--brand-primary); }
+.theme-brand .booking .info { background: #fff; border-right: 1px solid var(--line); }
+@media (max-width: 760px) { .theme-brand .booking .info { border-bottom: 1px solid var(--line); border-right: 0; } }
+.theme-brand .day { border: 1px solid var(--line); box-shadow: none; }
+.theme-brand .day.has { border-color: var(--brand-primary); color: var(--brand-primary); box-shadow: none; }
+.theme-brand .day.has:hover { background: var(--accent-soft); }
+.theme-brand .day.sel { background: var(--brand-primary); color: var(--brand-on-primary); }
+.theme-brand .day.sel small { color: var(--brand-on-primary); }
+.theme-brand .time {
+  background: #fff;
+  color: var(--brand-primary);
+  border: 1px solid var(--brand-primary);
+  font-family: var(--font-body), Arial, sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  padding: 10px;
+  text-shadow: none;
+  box-shadow: none;
+}
+.theme-brand .time:hover { background: var(--accent-soft); color: var(--brand-primary); text-shadow: none; }
+.theme-brand .time:active { transform: none; }
+.theme-brand .footer-pill { background: transparent; border: 0; }
+.theme-brand .footer a { color: var(--muted); }
+.brand-logo { display: block; max-width: 200px; max-height: 56px; margin-bottom: 14px; }
+.brand-name { font-weight: 800; font-size: 15px; color: var(--brand-primary); margin-bottom: 10px; letter-spacing: 0.02em; }
+.brand-preview {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px;
+}
+.theme-brand .btn.small { box-shadow: none; }

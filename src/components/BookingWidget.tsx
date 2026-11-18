@@ -11,11 +11,36 @@ interface Props {
   location: string;
   needsPhone: boolean;
   maxDaysAhead: number;
+  branded?: boolean;
+  brandName?: string;
+  logoUrl?: string;
 }
+
+const PLAYDATE_COPY = {
+  pick: "Pick a time to come over",
+  loading: "Ringing the calendar...",
+  empty: "Nobody's home this week. Try the next one.",
+  details: "Who's calling?",
+  submit: "Lock it in",
+  submitting: "Dialing...",
+  done: "It's a play date!",
+  doneNote: "See you then. A calendar invitation is on its way to your inbox.",
+};
+const BRAND_COPY: typeof PLAYDATE_COPY = {
+  pick: "Select a date and time",
+  loading: "Checking availability...",
+  empty: "No open times this week. Try the next week.",
+  details: "Your details",
+  submit: "Confirm booking",
+  submitting: "Booking...",
+  done: "You are booked.",
+  doneNote: "A calendar invitation is on its way to your inbox.",
+};
 
 type Step = "pick" | "form" | "done";
 
 export default function BookingWidget(p: Props) {
+  const C = p.branded ? BRAND_COPY : PLAYDATE_COPY;
   const [zone, setZone] = useState<string>("UTC");
   const [zones, setZones] = useState<string[]>([]);
   const [weekStart, setWeekStart] = useState<DateTime | null>(null);
@@ -129,6 +154,13 @@ export default function BookingWidget(p: Props) {
   return (
     <div className="card booking">
       <div className="info">
+        {p.branded &&
+          (p.logoUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img className="brand-logo" src={p.logoUrl} alt={p.brandName || ""} />
+          ) : p.brandName ? (
+            <div className="brand-name">{p.brandName}</div>
+          ) : null)}
         {p.hostName && <div className="muted">{p.hostName}</div>}
         <h1>{p.title}</h1>
         <p className="muted">
@@ -136,7 +168,7 @@ export default function BookingWidget(p: Props) {
           <br />
           {p.location}
         </p>
-        <p className="tagline">Like ringing the landline, minus the busy signal.</p>
+        {!p.branded && <p className="tagline">Like ringing the landline, minus the busy signal.</p>}
         {p.description && <p style={{ whiteSpace: "pre-wrap" }}>{p.description}</p>}
         {slot && step !== "pick" && <p><strong>{fmtFull(slot)}</strong></p>}
       </div>
@@ -145,7 +177,7 @@ export default function BookingWidget(p: Props) {
         {step === "pick" && (
           <>
             <div className="row spread" style={{ marginBottom: 12 }}>
-              <h2 style={{ margin: 0 }}>Pick a time to come over</h2>
+              <h2 style={{ margin: 0 }}>{C.pick}</h2>
               <div className="row">
                 <button className="btn secondary small" disabled={!canPrev} onClick={() => weekStart && setWeekStart(weekStart.minus({ days: 7 }))}>
                   Previous
@@ -169,9 +201,9 @@ export default function BookingWidget(p: Props) {
                 );
               })}
             </div>
-            {slots === null && <p className="muted">Ringing the calendar...</p>}
+            {slots === null && <p className="muted">{C.loading}</p>}
             {loadError && <div className="alert error">{loadError}</div>}
-            {slots !== null && !loadError && byDay.size === 0 && <p className="muted">Nobody's home this week. Try the next one.</p>}
+            {slots !== null && !loadError && byDay.size === 0 && <p className="muted">{C.empty}</p>}
             {day && byDay.get(day) && (
               <div className="times">
                 {byDay.get(day)!.map((s) => (
@@ -193,7 +225,7 @@ export default function BookingWidget(p: Props) {
         {step === "form" && slot && (
           <form onSubmit={submit} className="stack">
             <button type="button" className="linkbtn" onClick={() => setStep("pick")}>Back</button>
-            <h2>Who&apos;s calling?</h2>
+            <h2>{C.details}</h2>
             {formError && <div className="alert error">{formError}</div>}
             <div>
               <label htmlFor="name">Name</label>
@@ -219,20 +251,20 @@ export default function BookingWidget(p: Props) {
               <input id="website" name="website" type="text" tabIndex={-1} autoComplete="off" />
             </div>
             <div>
-              <button className="btn" disabled={submitting}>{submitting ? "Dialing..." : "Lock it in"}</button>
+              <button className="btn" disabled={submitting}>{submitting ? C.submitting : C.submit}</button>
             </div>
           </form>
         )}
 
         {step === "done" && slot && result && (
           <div className="stack">
-            <div className="alert ok big">It&apos;s a play date!</div>
+            <div className="alert ok big">{C.done}</div>
             <p>
               <strong>{p.title}</strong>
               <br />
               {fmtFull(slot)} ({zone})
             </p>
-            <p className="muted">See you then. A calendar invitation is on its way to your inbox.</p>
+            <p className="muted">{C.doneNote}</p>
             <p className="small">
               Need to change it? <a href={`/booking/${result.id}?t=${result.token}`}>Cancel or reschedule</a>
             </p>

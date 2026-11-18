@@ -70,6 +70,13 @@ create table if not exists event_types (
   created_at timestamptz not null default now()
 );
 
+alter table event_types add column if not exists theme text not null default 'playdate';
+alter table event_types add column if not exists brand_name text not null default '';
+alter table event_types add column if not exists brand_primary text not null default '';
+alter table event_types add column if not exists brand_dark text not null default '';
+alter table event_types add column if not exists brand_bg text not null default '';
+alter table event_types add column if not exists brand_logo_url text not null default '';
+
 create table if not exists bookings (
   id uuid primary key,
   event_type_id int references event_types(id) on delete set null,

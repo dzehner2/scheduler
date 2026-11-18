@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { syncCalendars } from "@/lib/accounts";
 import { cancelBooking, getBooking } from "@/lib/booking";
 import { db } from "@/lib/db";
-import { RESERVED_SLUGS } from "@/lib/eventTypes";
+import { isHex, RESERVED_SLUGS } from "@/lib/eventTypes";
 import { requireOwner } from "@/lib/session";
 import { parseHHMM, type WeeklyHours } from "@/lib/slots";
 
@@ -100,6 +100,24 @@ export async function saveEventType(form: FormData) {
     const location_type = String(form.get("location_type"));
     if (!["meet", "phone", "in_person", "custom"].includes(location_type)) throw new Error("Choose a location.");
     const capRaw = String(form.get("daily_cap") ?? "").trim();
+    const theme = form.get("theme") === "brand" ? "brand" : "playdate";
+    const color = (key: string, label: string) => {
+      const v = String(form.get(key) ?? "").trim();
+      if (theme === "brand" && !isHex(v)) throw new Error(`${label} must be a color like #117A4F.`);
+      return isHex(v) ? v.toUpperCase() : "";
+    };
+    const logo = String(form.get("brand_logo_url") ?? "").trim();
+    if (logo && (!/^https:\/\/\S+$/.test(logo) || logo.length > 500)) {
+      throw new Error("The logo address must start with https://");
+    }
+    const brand = {
+      theme,
+      brand_name: String(form.get("brand_name") ?? "").trim().slice(0, 120),
+      brand_primary: color("brand_primary", "Main color"),
+      brand_dark: color("brand_dark", "Text color"),
+      brand_bg: color("brand_bg", "Background color"),
+      brand_logo_url: logo,
+    };
 
     values = {
       title,
@@ -116,6 +134,7 @@ export async function saveEventType(form: FormData) {
       location_type,
       location_detail: String(form.get("location_detail") ?? "").trim().slice(0, 500),
       active: form.get("active") === "on",
+      ...brand,
     };
     if (!Number.isFinite(values.min_notice_min) || values.min_notice_min < 0 || values.min_notice_min > 60 * 24 * 30) {
       throw new Error("Minimum notice must be between 0 and 720 hours.");

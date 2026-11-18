@@ -10,6 +10,7 @@ interface Props {
   cancelled: boolean;
   past: boolean;
   rebookSlug: string | null;
+  branded?: boolean;
 }
 
 export default function ManageBooking(p: Props) {
@@ -46,7 +47,7 @@ export default function ManageBooking(p: Props) {
       {error && <div className="alert error">{error}</div>}
       {cancelled ? (
         <>
-          <div className="alert info">This play date is cancelled.</div>
+          <div className="alert info">{p.branded ? "This meeting is cancelled." : "This play date is cancelled."}</div>
           {p.rebookSlug && <a className="btn" href={`/${p.rebookSlug}`}>Book a new time</a>}
         </>
       ) : p.past ? (

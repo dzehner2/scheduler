@@ -59,6 +59,32 @@ const set = (q) => fetch(`${FAKE}/__set?${q}`);
   await owner.waitForURL(/event-types\?saved=1/);
   check((await owner.textContent("body")).includes("/intro"), "booking link created");
 
+  // 3b. A second link with CedarStone branding
+  await owner.goto(`${APP}/dashboard/event-types/new`);
+  await owner.fill("#title", "Site walk");
+  await owner.fill("#slug", "cedarstone");
+  await owner.fill("#description", "Walk the site and talk through options.");
+  await owner.selectOption("#theme", "brand");
+  await owner.click("button:has-text('CedarStone')");
+  check((await owner.inputValue("#brand_primary")) === "#117A4F", "CedarStone preset fills brand colors");
+  await owner.click("button:has-text('Save')");
+  await owner.waitForURL(/event-types\?saved=1/);
+  const cs = await browser.newPage({ viewport: { width: 1100, height: 760 } });
+  await cs.goto(`${APP}/cedarstone`);
+  await cs.waitForSelector(".day");
+  const csText = await cs.textContent("body");
+  check(csText.includes("CedarStone Design & Build"), "branded page shows company name");
+  check(!/landline|busy signal|rewind|PlayDate/i.test(csText), "branded page has no PlayDate 80s wording");
+  check(!csText.includes("\u2014"), "branded page has no em dashes");
+  const bg = await cs.evaluate(() => getComputedStyle(document.querySelector(".theme-brand")).backgroundColor);
+  check(bg === "rgb(242, 246, 242)", `branded page background is CedarStone light (${bg})`);
+  check(/CedarStone/.test(await cs.title()), "branded page title includes company");
+  await cs.waitForSelector(".time", { timeout: 15000 }).catch(() => {});
+  await cs.screenshot({ path: `${OUT}/shot-cedarstone.png` });
+  const pd = await browser.newPage();
+  await pd.goto(`${APP}/intro`);
+  check((await pd.textContent("body")).includes("landline"), "other links keep the PlayDate look");
+
   // 4. Seed conflicts on two different accounts, a week out (Monday)
   let mon = DateTime.now().setZone(TZ).startOf("day").plus({ days: 3 });
   while (mon.weekday !== 1) mon = mon.plus({ days: 1 });

@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import BrandFields from "@/components/BrandFields";
 import ConfirmButton from "@/components/ConfirmButton";
 import { getEventType, type EventType } from "@/lib/eventTypes";
 import { deleteEventType, saveEventType } from "../../actions";
@@ -20,6 +21,12 @@ const DEFAULTS: Omit<EventType, "id"> = {
   location_type: "meet",
   location_detail: "",
   active: true,
+  theme: "playdate",
+  brand_name: "",
+  brand_primary: "",
+  brand_dark: "",
+  brand_bg: "",
+  brand_logo_url: "",
 };
 
 export default async function EditEventType({
@@ -132,6 +139,17 @@ export default async function EditEventType({
             </div>
           </div>
         </div>
+
+        <BrandFields
+          initial={{
+            theme: t.theme,
+            name: t.brand_name,
+            primary: t.brand_primary,
+            dark: t.brand_dark,
+            bg: t.brand_bg,
+            logoUrl: t.brand_logo_url,
+          }}
+        />
 
         <div className="row spread">
           <button className="btn">Save</button>

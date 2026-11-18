@@ -46,6 +46,10 @@ export async function GET(req: NextRequest) {
   } catch (err) {
     console.error("Availability check failed", err);
     const status = err instanceof CalendarUnavailableError ? 503 : 500;
-    return NextResponse.json({ error: "Can't get through to the calendar right now. Please try again in a bit." }, { status });
+    const error =
+      t.theme === "brand"
+        ? "Availability is temporarily unavailable. Please try again later."
+        : "Can't get through to the calendar right now. Please try again in a bit.";
+    return NextResponse.json({ error }, { status });
   }
 }

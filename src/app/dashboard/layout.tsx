@@ -16,7 +16,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
     <>
       <nav className="nav">
         <div className="container">
-          <strong>Scheduler</strong>
+          <strong>PlayDate</strong>
           <NavLinks />
           <form action="/api/auth/logout" method="post">
             <button className="linkbtn" title={owner}>Sign out</button>

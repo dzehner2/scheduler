@@ -1,6 +1,6 @@
-# Scheduler
+# PlayDate
 
-A personal booking page, like Calendly, that checks **all of your Google calendars across multiple Google accounts** before offering a time. You can't get double-booked because one calendar didn't know about another.
+PlayDate ("come over for a play date!") is a personal booking page, like Calendly, that checks **all of your Google calendars across multiple Google accounts** before offering a time. You can't get double-booked because one calendar didn't know about another.
 
 - Connect any number of Google accounts and choose which calendars count as busy.
 - Booking links with length, buffers, minimum notice, how far ahead, start-time interval, daily cap and weekly hours.

@@ -35,7 +35,7 @@ export async function GET(req: NextRequest) {
 
     if (state.mode === "login") {
       if (!config.ownerEmails.includes(email)) {
-        return fail(`${email} is not allowed to manage this scheduler.`);
+        return fail(`${email} is not allowed to manage this PlayDate.`);
       }
       await saveAccount(email, tokens);
       await startSession(email);

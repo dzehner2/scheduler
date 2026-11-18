@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Schedule a meeting",
+  title: "PlayDate",
   robots: { index: false, follow: false },
 };
 

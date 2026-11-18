@@ -1,4 +1,4 @@
-# Setup
+# PlayDate setup
 
 About 30 minutes, start to finish. You need a Google account, a GitHub account (you already have this repo), and a free Vercel account.
 
@@ -13,11 +13,11 @@ The app has three parts:
 ## 1. Google Cloud OAuth client
 
 1. Go to https://console.cloud.google.com/ and sign in with your main Google account.
-2. At the top, click the project picker, then **New project**. Name it `Scheduler` and click **Create**. Make sure it is selected.
+2. At the top, click the project picker, then **New project**. Name it `PlayDate` and click **Create**. Make sure it is selected.
 3. Open **APIs and Services > Library**, search for **Google Calendar API**, and click **Enable**.
 4. Open **APIs and Services > OAuth consent screen** (on newer consoles this is **Google Auth Platform > Branding**).
    - User type: **External** (choose Internal only if every account you will connect is in the same Google Workspace).
-   - App name: `Scheduler`. Support email and developer contact: your email.
+   - App name: `PlayDate`. Support email and developer contact: your email.
    - Save.
 5. Under **Data access** (or **Scopes**), add these scopes:
    - `.../auth/calendar.readonly`
@@ -25,15 +25,15 @@ The app has three parts:
    - `openid` and `.../auth/userinfo.email`
 6. Under **Audience**, click **Publish app** so the status is **In production**.
    - Do not skip this. In "Testing" status, Google expires your sign-in every 7 days and the booking page will pause.
-   - Google will not review it for a personal app. When you sign in you will see "Google hasn't verified this app". Click **Advanced**, then **Go to Scheduler (unsafe)**. This is expected for an app only you use.
+   - Google will not review it for a personal app. When you sign in you will see "Google hasn't verified this app". Click **Advanced**, then **Go to PlayDate (unsafe)**. This is expected for an app only you use.
 7. Open **APIs and Services > Credentials > Create credentials > OAuth client ID**.
-   - Application type: **Web application**. Name: `Scheduler`.
+   - Application type: **Web application**. Name: `PlayDate`.
    - Authorized redirect URIs: add `http://localhost:3000/api/auth/callback` now. You will add the Vercel address in step 3.
    - Click **Create** and copy the **Client ID** and **Client secret**.
 
 ## 2. Deploy to Vercel with a database
 
-1. Go to https://vercel.com/new, import the `dzehner2/scheduler` repository, and click **Deploy**. The first deploy will show errors until the settings below are filled in. That is expected.
+1. Go to https://vercel.com/new, import the `dzehner2/scheduler` repository, name the project `playdate`, and click **Deploy**. The first deploy will show errors until the settings below are filled in. That is expected.
 2. In the new project, open **Storage > Create Database > Neon (Postgres)**, accept the defaults, and connect it to the project. This sets `DATABASE_URL` for you.
 3. Open **Settings > Environment Variables** and add:
 
@@ -43,7 +43,7 @@ The app has three parts:
    | `GOOGLE_CLIENT_SECRET` | from step 1.7 |
    | `APP_SECRET` | a long random string, 32+ characters. A password manager's generator works. Do not change it later, or connected accounts must be reconnected. |
    | `OWNER_EMAIL` | the Google address you will sign in with. Several are allowed, separated by commas. |
-   | `APP_URL` | your Vercel address, for example `https://scheduler-dan.vercel.app` (no trailing slash) |
+   | `APP_URL` | your Vercel address, for example `https://playdate-dan.vercel.app` (no trailing slash) |
 
 4. Open **Deployments**, click the three dots on the latest one, and choose **Redeploy**.
 

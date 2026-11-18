@@ -6,6 +6,7 @@ import type { Interval } from "./slots";
 
 export interface AccountRow {
   id: number;
+  user_id: number;
   email: string;
   refresh_token: string;
   access_token: string | null;
@@ -17,7 +18,7 @@ export interface AccountRow {
 export class CalendarUnavailableError extends Error {}
 
 /** Save (or update) a Google account after the OAuth callback, then sync its calendar list. */
-export async function saveAccount(email: string, tokens: google.TokenResponse): Promise<number> {
+export async function saveAccount(userId: number, email: string, tokens: google.TokenResponse): Promise<number> {
   const sql = await db();
   const secret = config.appSecret;
   const expires = new Date(Date.now() + tokens.expires_in * 1000);
@@ -27,9 +28,9 @@ export async function saveAccount(email: string, tokens: google.TokenResponse): 
   if (tokens.refresh_token) {
     const refresh = encrypt(tokens.refresh_token, secret);
     const [row] = await sql<{ id: number }[]>`
-      insert into accounts (email, refresh_token, access_token, access_expires_at)
-      values (${email}, ${refresh}, ${access}, ${expires})
-      on conflict (email) do update set
+      insert into accounts (user_id, email, refresh_token, access_token, access_expires_at)
+      values (${userId}, ${email}, ${refresh}, ${access}, ${expires})
+      on conflict (user_id, email) do update set
         refresh_token = excluded.refresh_token, access_token = excluded.access_token,
         access_expires_at = excluded.access_expires_at, status = 'ok', last_error = null
       returning id`;
@@ -37,7 +38,7 @@ export async function saveAccount(email: string, tokens: google.TokenResponse): 
   } else {
     const [row] = await sql<{ id: number }[]>`
       update accounts set access_token = ${access}, access_expires_at = ${expires}, status = 'ok', last_error = null
-      where email = ${email} returning id`;
+      where user_id = ${userId} and email = ${email} returning id`;
     if (!row) throw new Error("Google did not return a refresh token. Remove the app's access in your Google account settings and try again.");
     id = row.id;
   }
@@ -46,14 +47,23 @@ export async function saveAccount(email: string, tokens: google.TokenResponse): 
 
   // First account connected becomes the booking calendar (its primary calendar).
   await sql`
-    update settings set booking_account_id = ${id}, booking_calendar_id = ${email}
-    where id = 1 and booking_account_id is null`;
+    insert into user_settings (user_id, booking_account_id, booking_calendar_id) values (${userId}, ${id}, ${email})
+    on conflict (user_id) do update set booking_account_id = excluded.booking_account_id,
+      booking_calendar_id = excluded.booking_calendar_id
+    where user_settings.booking_account_id is null`;
   return id;
 }
 
 async function markError(id: number, message: string) {
   const sql = await db();
   await sql`update accounts set status = 'error', last_error = ${message} where id = ${id}`;
+}
+
+/** True if the Google account belongs to this PlayDate user. */
+export async function ownsAccount(userId: number, accountId: number): Promise<boolean> {
+  const sql = await db();
+  const [r] = await sql`select 1 from accounts where id = ${accountId} and user_id = ${userId}`;
+  return !!r;
 }
 
 /** Valid access token for an account, refreshing it if needed. */
@@ -114,23 +124,26 @@ export async function syncCalendars(accountId: number): Promise<void> {
  * connected account, plus every booking calendar (default and per link) and confirmed bookings stored
  * here. Fails closed: if any calendar cannot be read, this throws.
  */
-export async function busyTime(start: number, end: number): Promise<Interval[]> {
+export async function busyTime(userId: number, start: number, end: number): Promise<Interval[]> {
   const sql = await db();
   const rows = await sql<{ account_id: number; google_id: string }[]>`
-    select c.account_id, c.google_id from calendars c where c.check_conflicts
+    select c.account_id, c.google_id from calendars c join accounts a on a.id = c.account_id
+      where c.check_conflicts and a.user_id = ${userId}
     union
-    select s.booking_account_id, s.booking_calendar_id from settings s
-      where s.booking_account_id is not null and s.booking_calendar_id is not null
+    select s.booking_account_id, s.booking_calendar_id from user_settings s
+      join accounts a on a.id = s.booking_account_id and a.user_id = ${userId}
+      where s.user_id = ${userId} and s.booking_calendar_id is not null
     union
     select e.booking_account_id, e.booking_calendar_id from event_types e
       join calendars c on c.account_id = e.booking_account_id and c.google_id = e.booking_calendar_id
-      where e.active`;
+      join accounts a on a.id = c.account_id and a.user_id = ${userId}
+      where e.active and e.user_id = ${userId}`;
   if (rows.length === 0) throw new CalendarUnavailableError("No calendars are connected yet.");
 
   const broken = await sql<{ email: string }[]>`
     select distinct a.email from accounts a
     join calendars c on c.account_id = a.id and c.check_conflicts
-    where a.status <> 'ok'`;
+    where a.status <> 'ok' and a.user_id = ${userId}`;
   if (broken.length) {
     throw new CalendarUnavailableError(`Reconnect required for: ${broken.map((b) => b.email).join(", ")}`);
   }
@@ -151,7 +164,8 @@ export async function busyTime(start: number, end: number): Promise<Interval[]> 
 
   const booked = await sql<{ block_start_at: Date; block_end_at: Date }[]>`
     select block_start_at, block_end_at from bookings
-    where status = 'confirmed' and block_end_at > ${new Date(start)} and block_start_at < ${new Date(end)}`;
+    where status = 'confirmed' and user_id = ${userId}
+      and block_end_at > ${new Date(start)} and block_start_at < ${new Date(end)}`;
 
   return [
     ...results.flat(),

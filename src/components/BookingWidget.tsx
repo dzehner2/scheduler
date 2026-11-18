@@ -3,6 +3,8 @@ import { DateTime } from "luxon";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 interface Props {
+  /** null for the primary owner's root links */
+  handle: string | null;
   slug: string;
   title: string;
   description: string;
@@ -71,7 +73,7 @@ export default function BookingWidget(p: Props) {
     const end = start.plus({ days: 7 });
     try {
       const res = await fetch(
-        `/api/slots?type=${encodeURIComponent(p.slug)}&start=${encodeURIComponent(start.toUTC().toISO()!)}&end=${encodeURIComponent(end.toUTC().toISO()!)}`,
+        `/api/slots?${p.handle ? `u=${encodeURIComponent(p.handle)}&` : ""}type=${encodeURIComponent(p.slug)}&start=${encodeURIComponent(start.toUTC().toISO()!)}&end=${encodeURIComponent(end.toUTC().toISO()!)}`,
         { cache: "no-store" },
       );
       const body = await res.json();
@@ -81,7 +83,7 @@ export default function BookingWidget(p: Props) {
       setLoadError(err instanceof Error ? err.message : "Could not load times.");
       setSlots([]);
     }
-  }, [p.slug]);
+  }, [p.slug, p.handle]);
 
   useEffect(() => {
     if (weekStart) load(weekStart);
@@ -130,7 +132,7 @@ export default function BookingWidget(p: Props) {
       const res = await fetch("/api/book", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...Object.fromEntries(f), type: p.slug, start: slot }),
+        body: JSON.stringify({ ...Object.fromEntries(f), u: p.handle, type: p.slug, start: slot }),
       });
       const body = await res.json();
       if (!res.ok) {

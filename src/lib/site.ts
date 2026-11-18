@@ -1,10 +1,12 @@
 import { getSettings } from "./eventTypes";
+import { primaryOwnerId } from "./users";
 
 /** Who runs this PlayDate, for the public homepage and legal pages. */
 export async function siteOperator(): Promise<{ name: string; contact: string | null }> {
   let name = "";
   try {
-    name = (await getSettings()).display_name;
+    const id = await primaryOwnerId();
+    if (id) name = (await getSettings(id)).display_name;
   } catch {
     // Database not set up yet; pages still render.
   }

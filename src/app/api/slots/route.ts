@@ -10,7 +10,7 @@ const MAX_RANGE = 35 * 24 * 3600_000;
 
 export async function GET(req: NextRequest) {
   const q = req.nextUrl.searchParams;
-  const t = await getEventTypeBySlug(q.get("type") ?? "");
+  const t = await getEventTypeBySlug(q.get("u") || null, q.get("type") ?? "");
   if (!t || !t.active) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const start = Date.parse(q.get("start") ?? "");
@@ -19,13 +19,13 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Invalid range" }, { status: 400 });
   }
 
-  const settings = await getSettings();
+  const settings = await getSettings(t.user_id);
   const now = Date.now();
   const from = Math.max(start, now);
   if (from >= end) return NextResponse.json({ slots: [] });
 
   try {
-    const busy = await busyTime(from - 24 * 3600_000, end + 24 * 3600_000);
+    const busy = await busyTime(t.user_id, from - 24 * 3600_000, end + 24 * 3600_000);
     const sql = await db();
     const same = await sql<{ start_at: Date }[]>`
       select start_at from bookings where status = 'confirmed' and event_type_id = ${t.id}

@@ -3,17 +3,20 @@ import ConfirmButton from "@/components/ConfirmButton";
 import type { BookingRow } from "@/lib/booking";
 import { db } from "@/lib/db";
 import { getSettings } from "@/lib/eventTypes";
+import { requireUser } from "@/lib/session";
 import { cancelBookingAction } from "./actions";
 
 export default async function Bookings({ searchParams }: { searchParams: Promise<{ error?: string; past?: string }> }) {
   const { error, past } = await searchParams;
   const sql = await db();
-  const { time_zone } = await getSettings();
+  const me = await requireUser();
+  const { time_zone } = await getSettings(me.id);
   const showPast = past === "1";
   const rows = showPast
-    ? await sql<BookingRow[]>`select * from bookings where start_at < now() order by start_at desc limit 100`
+    ? await sql<BookingRow[]>`select * from bookings where user_id = ${me.id} and start_at < now() order by start_at desc limit 100`
     : await sql<BookingRow[]>`
-        select * from bookings where end_at >= now() and (status = 'confirmed' or cancelled_at > now() - interval '7 days')
+        select * from bookings where user_id = ${me.id} and end_at >= now()
+          and (status = 'confirmed' or cancelled_at > now() - interval '7 days')
         order by start_at limit 200`;
 
   const fmt = (d: Date) => DateTime.fromJSDate(d, { zone: time_zone }).toFormat("ccc LLL d, h:mm a");

@@ -1,9 +1,10 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { config, GOOGLE_SCOPES } from "@/lib/config";
+import { GOOGLE_SCOPES, config } from "@/lib/config";
 import { safeEqual, verify } from "@/lib/crypto";
 import { exchangeCode, userEmail } from "@/lib/google";
 import { saveAccount } from "@/lib/accounts";
-import { currentOwner, startSession } from "@/lib/session";
+import { currentUser, startSession } from "@/lib/session";
+import { SignupFullError, userForLogin } from "@/lib/users";
 
 function fail(message: string, to = "/login") {
   const url = new URL(to, config.appUrl);
@@ -15,8 +16,8 @@ function fail(message: string, to = "/login") {
 
 export async function GET(req: NextRequest) {
   const q = req.nextUrl.searchParams;
-  const state = verify<{ nonce: string; mode: "login" | "connect" }>(req.cookies.get("sched_oauth")?.value, config.appSecret);
-  const back = state?.mode === "connect" ? "/dashboard/calendars" : "/login";
+  const state = verify<{ nonce: string; mode: "login" | "connect" | "signup" }>(req.cookies.get("sched_oauth")?.value, config.appSecret);
+  const back = state?.mode === "connect" ? "/dashboard/calendars" : state?.mode === "signup" ? "/signup" : "/login";
 
   if (q.get("error")) return fail(`Google sign-in was cancelled (${q.get("error")}).`, back);
   const code = q.get("code");
@@ -33,19 +34,30 @@ export async function GET(req: NextRequest) {
     }
     const email = await userEmail(tokens.access_token);
 
-    if (state.mode === "login") {
-      if (!config.ownerEmails.includes(email)) {
-        return fail(`${email} is not allowed to manage this PlayDate.`);
+    if (state.mode === "login" || state.mode === "signup") {
+      let user;
+      try {
+        user = await userForLogin(email, state.mode === "signup");
+      } catch (err) {
+        if (err instanceof SignupFullError) {
+          return fail("Those spots just filled up. Join the waitlist below and you will hear when one opens.", "/signup");
+        }
+        throw err;
       }
-      await saveAccount(email, tokens);
+      if (!user) {
+        return fail(`There is no PlayDate account for ${email}. Sign up first, or sign in with the account you signed up with.`);
+      }
+      const isNew = Date.now() - new Date(user.created_at).getTime() < 60_000;
+      await saveAccount(user.id, email, tokens);
       await startSession(email);
-      const res = NextResponse.redirect(new URL("/dashboard", config.appUrl));
+      const res = NextResponse.redirect(new URL(isNew ? "/dashboard/calendars?welcome=1" : "/dashboard", config.appUrl));
       res.cookies.delete("sched_oauth");
       return res;
     }
 
-    if (!(await currentOwner())) return fail("Please sign in first.");
-    await saveAccount(email, tokens);
+    const user = await currentUser();
+    if (!user) return fail("Please sign in first.");
+    await saveAccount(user.id, email, tokens);
     const res = NextResponse.redirect(new URL(`/dashboard/calendars?connected=${encodeURIComponent(email)}`, config.appUrl));
     res.cookies.delete("sched_oauth");
     return res;

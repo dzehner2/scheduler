@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import ManageBooking from "@/components/ManageBooking";
 import { getBooking, tokenMatches } from "@/lib/booking";
+import { linkPathFor } from "@/lib/users";
 import { brandingFor, brandStyle, getEventType } from "@/lib/eventTypes";
 
 export const dynamic = "force-dynamic";
@@ -29,7 +30,7 @@ export default async function BookingPage({
         start={b.start_at.toISOString()}
         cancelled={b.status !== "confirmed"}
         past={b.start_at < new Date()}
-        rebookSlug={type?.active ? type.slug : null}
+        rebookPath={type?.active ? await linkPathFor(type.user_id, type.slug) : null}
         branded={branded}
       />
     </main>

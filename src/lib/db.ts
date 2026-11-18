@@ -109,13 +109,71 @@ create table if not exists bookings (
   cancelled_at timestamptz
 );
 create index if not exists bookings_confirmed_time on bookings (block_start_at, block_end_at) where status = 'confirmed';
+
+-- ---------- Multiple users ----------
+create table if not exists users (
+  id serial primary key,
+  email text not null unique,
+  handle text unique,
+  role text not null default 'user',
+  created_at timestamptz not null default now()
+);
+create table if not exists user_settings (
+  user_id int primary key references users(id) on delete cascade,
+  display_name text not null default '',
+  time_zone text not null default 'America/Los_Angeles',
+  booking_account_id int references accounts(id) on delete set null,
+  booking_calendar_id text
+);
+alter table settings add column if not exists signup_limit int not null default 5;
+
+alter table accounts add column if not exists user_id int references users(id) on delete cascade;
+alter table accounts drop constraint if exists accounts_email_key;
+create unique index if not exists accounts_user_email on accounts (user_id, email);
+
+alter table event_types add column if not exists user_id int references users(id) on delete cascade;
+alter table event_types drop constraint if exists event_types_slug_key;
+create unique index if not exists event_types_user_slug on event_types (user_id, slug);
+
+alter table bookings add column if not exists user_id int references users(id) on delete cascade;
+create index if not exists bookings_user_time on bookings (user_id, block_start_at) where status = 'confirmed';
 `;
+
+/**
+ * Data created before PlayDate had multiple users belongs to the primary
+ * owner (first OWNER_EMAIL). Idempotent: does nothing once claimed.
+ */
+async function claimSingleUserData(sql: Sql) {
+  const owner = config.ownerEmails[0];
+  if (!owner) return;
+  const [u] = await sql<{ id: number }[]>`
+    insert into users (email, role) values (${owner}, 'admin')
+    on conflict (email) do update set role = 'admin'
+    returning id`;
+  await sql`update accounts set user_id = ${u.id} where user_id is null`;
+  await sql`update event_types set user_id = ${u.id} where user_id is null`;
+  await sql`update bookings b set user_id = coalesce(
+      (select e.user_id from event_types e where e.id = b.event_type_id),
+      (select a.user_id from accounts a where a.id = b.account_id), ${u.id})
+    where b.user_id is null`;
+  await sql`
+    insert into user_settings (user_id, display_name, time_zone, booking_account_id, booking_calendar_id)
+    select ${u.id}, display_name, time_zone, booking_account_id, booking_calendar_id from settings where id = 1
+    on conflict (user_id) do nothing`;
+}
 
 /** Returns the SQL client, creating tables on first use. */
 export async function db(): Promise<Sql> {
   const sql = client();
   if (!globalForDb.__schema) {
-    globalForDb.__schema = sql.unsafe(SCHEMA).then(() => undefined);
+    globalForDb.__schema = sql
+      .begin(async (tx) => {
+        // One instance migrates at a time; others wait, then see it done.
+        await tx`select pg_advisory_xact_lock(7220012)`;
+        await tx.unsafe(SCHEMA);
+        await claimSingleUserData(tx as unknown as Sql);
+      })
+      .then(() => undefined);
     globalForDb.__schema.catch(() => {
       globalForDb.__schema = undefined;
     });

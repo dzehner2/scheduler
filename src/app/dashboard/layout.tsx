@@ -2,25 +2,25 @@ import Link from "next/link";
 import Logo from "@/components/Logo";
 import NavLinks from "@/components/NavLinks";
 import { db } from "@/lib/db";
-import { requireOwner } from "@/lib/session";
+import { requireUser } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const owner = await requireOwner();
+  const me = await requireUser();
   const sql = await db();
   const broken = await sql<{ email: string; last_error: string | null }[]>`
-    select email, last_error from accounts where status <> 'ok' order by email`;
-  const [{ count }] = await sql<{ count: number }[]>`select count(*)::int as count from calendars where check_conflicts`;
+    select email, last_error from accounts where status <> 'ok' and user_id = ${me.id} order by email`;
+  const [{ count }] = await sql<{ count: number }[]>`select count(*)::int as count from calendars c join accounts a on a.id = c.account_id where c.check_conflicts and a.user_id = ${me.id}`;
 
   return (
     <>
       <nav className="nav">
         <div className="container">
           <Link href="/dashboard" className="navlogo"><Logo size="sm" /></Link>
-          <NavLinks />
+          <NavLinks admin={me.role === "admin"} />
           <form action="/api/auth/logout" method="post">
-            <button className="linkbtn" title={owner}>Sign out</button>
+            <button className="linkbtn" title={me.email}>Sign out</button>
           </form>
         </div>
       </nav>

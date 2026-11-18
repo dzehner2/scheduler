@@ -1,3 +1,4 @@
+import { config } from "./config";
 import { db } from "./db";
 import type { SlotRules, WeeklyHours } from "./slots";
 
@@ -5,6 +6,7 @@ export type LocationType = "meet" | "phone" | "in_person" | "custom";
 
 export interface EventType {
   id: number;
+  user_id: number;
   slug: string;
   title: string;
   description: string;
@@ -107,27 +109,51 @@ export function rulesFor(t: EventType): SlotRules {
   };
 }
 
-export async function getSettings(): Promise<Settings> {
+const DEFAULT_SETTINGS: Settings = {
+  display_name: "",
+  time_zone: "America/Los_Angeles",
+  booking_account_id: null,
+  booking_calendar_id: null,
+};
+
+/** A user's own settings (name, time zone, default booking calendar). */
+export async function getSettings(userId: number): Promise<Settings> {
   const sql = await db();
-  const [s] = await sql<Settings[]>`select display_name, time_zone, booking_account_id, booking_calendar_id from settings where id = 1`;
-  return s;
+  const [s] = await sql<Settings[]>`
+    select display_name, time_zone, booking_account_id, booking_calendar_id from user_settings where user_id = ${userId}`;
+  return s ?? DEFAULT_SETTINGS;
 }
 
-export async function getEventTypeBySlug(slug: string): Promise<EventType | null> {
+/**
+ * A public booking link. `handle` null means the primary owner's links at the
+ * site root (/intro); otherwise /handle/intro.
+ */
+export async function getEventTypeBySlug(handle: string | null, slug: string): Promise<(EventType & { owner_handle: string | null }) | null> {
   const sql = await db();
-  const [t] = await sql<EventType[]>`select * from event_types where slug = ${slug}`;
+  const [t] = handle
+    ? await sql<(EventType & { owner_handle: string | null })[]>`
+        select e.*, u.handle as owner_handle from event_types e join users u on u.id = e.user_id
+        where u.handle = ${handle} and e.slug = ${slug}`
+    : await sql<(EventType & { owner_handle: string | null })[]>`
+        select e.*, u.handle as owner_handle from event_types e join users u on u.id = e.user_id
+        where u.email = ${config.ownerEmails[0] ?? ""} and e.slug = ${slug}`;
   return t ?? null;
 }
 
-export async function getEventType(id: number): Promise<EventType | null> {
+/** By id. Pass userId to only return the link if that user owns it. */
+export async function getEventType(id: number, userId?: number): Promise<EventType | null> {
+  if (!Number.isInteger(id)) return null;
   const sql = await db();
-  const [t] = await sql<EventType[]>`select * from event_types where id = ${id}`;
+  const [t] =
+    userId === undefined
+      ? await sql<EventType[]>`select * from event_types where id = ${id}`
+      : await sql<EventType[]>`select * from event_types where id = ${id} and user_id = ${userId}`;
   return t ?? null;
 }
 
-export async function listEventTypes(): Promise<EventType[]> {
+export async function listEventTypes(userId: number): Promise<EventType[]> {
   const sql = await db();
-  return sql<EventType[]>`select * from event_types order by active desc, title`;
+  return sql<EventType[]>`select * from event_types where user_id = ${userId} order by active desc, title`;
 }
 
 export function locationLabel(t: Pick<EventType, "location_type" | "location_detail">): string {

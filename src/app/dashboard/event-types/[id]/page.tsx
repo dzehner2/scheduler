@@ -2,12 +2,14 @@ import { notFound } from "next/navigation";
 import BrandFields from "@/components/BrandFields";
 import ConfirmButton from "@/components/ConfirmButton";
 import { db } from "@/lib/db";
+import { requireUser } from "@/lib/session";
+import { isPrimaryOwner } from "@/lib/users";
 import { getEventType, getSettings, type EventType } from "@/lib/eventTypes";
 import { deleteEventType, saveEventType } from "../../actions";
 
 const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
-const DEFAULTS: Omit<EventType, "id"> = {
+const DEFAULTS: Omit<EventType, "id" | "user_id"> = {
   slug: "",
   title: "",
   description: "",
@@ -41,14 +43,15 @@ export default async function EditEventType({
 }) {
   const { id } = await params;
   const { error } = await searchParams;
-  const existing = id === "new" ? null : await getEventType(Number(id));
+  const me = await requireUser();
+  const existing = id === "new" ? null : await getEventType(Number(id), me.id);
   if (id !== "new" && !existing) notFound();
-  const t = existing ?? { ...DEFAULTS, id: 0 };
+  const t = existing ?? { ...DEFAULTS, id: 0, user_id: me.id };
   const sql = await db();
-  const settings = await getSettings();
+  const settings = await getSettings(me.id);
   const writable = await sql<{ account_id: number; google_id: string; summary: string; email: string }[]>`
     select c.account_id, c.google_id, c.summary, a.email from calendars c join accounts a on a.id = c.account_id
-    where c.access_role in ('owner', 'writer') order by a.created_at, (c.google_id = a.email) desc, c.summary`;
+    where c.access_role in ('owner', 'writer') and a.user_id = ${me.id} order by a.created_at, (c.google_id = a.email) desc, c.summary`;
   const def = writable.find((c) => c.account_id === settings.booking_account_id && c.google_id === settings.booking_calendar_id);
   const current = t.booking_account_id && t.booking_calendar_id ? `${t.booking_account_id}|${t.booking_calendar_id}` : "";
   const currentMissing = current && !writable.some((c) => `${c.account_id}|${c.google_id}` === current);
@@ -68,7 +71,7 @@ export default async function EditEventType({
             <div>
               <label htmlFor="slug">Link address</label>
               <input id="slug" name="slug" type="text" required defaultValue={t.slug} placeholder="intro" pattern="[a-z0-9][a-z0-9\-]{1,48}" />
-              <div className="hint">Lowercase letters, numbers and dashes. Becomes yoursite/intro</div>
+              <div className="hint">Lowercase letters, numbers and dashes. Your link becomes {isPrimaryOwner(me) ? "" : `${me.handle}/`}intro</div>
             </div>
           </div>
           <div>

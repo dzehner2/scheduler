@@ -13,7 +13,7 @@ export async function POST(req: NextRequest) {
   // Honeypot: real people never fill this hidden field.
   if (body.website) return NextResponse.json({ error: "Invalid request" }, { status: 400 });
 
-  const t = await getEventTypeBySlug(String(body.type ?? ""));
+  const t = await getEventTypeBySlug(body.u ? String(body.u) : null, String(body.type ?? ""));
   if (!t) return NextResponse.json({ error: "Not found" }, { status: 404 });
   const start = Date.parse(String(body.start ?? ""));
   if (!Number.isFinite(start)) return NextResponse.json({ error: "Invalid time" }, { status: 400 });

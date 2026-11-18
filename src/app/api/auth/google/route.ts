@@ -2,11 +2,12 @@ import { NextResponse, type NextRequest } from "next/server";
 import { config } from "@/lib/config";
 import { randomToken, sign } from "@/lib/crypto";
 import { authUrl } from "@/lib/google";
-import { currentOwner } from "@/lib/session";
+import { currentUser } from "@/lib/session";
 
 export async function GET(req: NextRequest) {
-  const mode = req.nextUrl.searchParams.get("mode") === "connect" ? "connect" : "login";
-  if (mode === "connect" && !(await currentOwner())) {
+  const m = req.nextUrl.searchParams.get("mode");
+  const mode = m === "connect" || m === "signup" ? m : "login";
+  if (mode === "connect" && !(await currentUser())) {
     return NextResponse.redirect(`${config.appUrl}/login`);
   }
   const nonce = randomToken();

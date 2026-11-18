@@ -26,6 +26,7 @@ export interface GuestInput {
 
 export interface BookingRow {
   id: string;
+  user_id: number;
   event_type_id: number | null;
   event_title: string;
   start_at: Date;
@@ -78,11 +79,14 @@ export async function bookingCalendarFor(t: EventType): Promise<{ accountId: num
     const [ok] = await sql`
       select 1 from calendars c join accounts a on a.id = c.account_id
       where c.account_id = ${t.booking_account_id} and c.google_id = ${t.booking_calendar_id}
-        and c.access_role in ('owner', 'writer')`;
+        and c.access_role in ('owner', 'writer') and a.user_id = ${t.user_id}`;
     if (ok) return { accountId: t.booking_account_id, calendarId: t.booking_calendar_id };
   }
-  const s = await getSettings();
-  if (s.booking_account_id && s.booking_calendar_id) return { accountId: s.booking_account_id, calendarId: s.booking_calendar_id };
+  const s = await getSettings(t.user_id);
+  if (s.booking_account_id && s.booking_calendar_id) {
+    const [mine] = await sql`select 1 from accounts where id = ${s.booking_account_id} and user_id = ${t.user_id}`;
+    if (mine) return { accountId: s.booking_account_id, calendarId: s.booking_calendar_id };
+  }
   return null;
 }
 
@@ -91,7 +95,7 @@ const LOCK_KEY = 7_220_011; // any constant; serializes bookings so two guests c
 export async function createBooking(t: EventType, startMs: number, input: GuestInput): Promise<BookingRow> {
   if (!t.active) throw new BookingError("This booking link is turned off.", 404);
   const guest = validateGuest(t, input);
-  const settings = await getSettings();
+  const settings = await getSettings(t.user_id);
   const target = await bookingCalendarFor(t);
   if (!target) throw new BookingError("Booking is not set up yet.", 503);
   const rules = rulesFor(t);
@@ -100,18 +104,19 @@ export async function createBooking(t: EventType, startMs: number, input: GuestI
   const sql = await db();
 
   return sql.begin(async (tx) => {
-    await tx`select pg_advisory_xact_lock(${LOCK_KEY})`;
+    await tx`select pg_advisory_xact_lock(${LOCK_KEY}, ${t.user_id})`; // per user
 
     // Fresh check of every calendar, at the moment of booking.
     const dayStart = DateTime.fromMillis(startMs, { zone: settings.time_zone }).startOf("day");
-    const busy = await deps.busyTime(Math.min(block.start, dayStart.toMillis()), Math.max(block.end, dayStart.plus({ days: 1 }).toMillis()));
+    const busy = await deps.busyTime(t.user_id, Math.min(block.start, dayStart.toMillis()), Math.max(block.end, dayStart.plus({ days: 1 }).toMillis()));
     const sameType = await tx<{ start_at: Date }[]>`
       select start_at from bookings
       where status = 'confirmed' and event_type_id = ${t.id}
         and start_at >= ${dayStart.toJSDate()} and start_at < ${dayStart.plus({ days: 1 }).toJSDate()}`;
     const confirmed = await tx<{ block_start_at: Date; block_end_at: Date }[]>`
       select block_start_at, block_end_at from bookings
-      where status = 'confirmed' and block_end_at > ${new Date(block.start)} and block_start_at < ${new Date(block.end)}`;
+      where status = 'confirmed' and user_id = ${t.user_id}
+        and block_end_at > ${new Date(block.start)} and block_start_at < ${new Date(block.end)}`;
 
     const ok = isSlotAvailable(
       {
@@ -163,9 +168,9 @@ export async function createBooking(t: EventType, startMs: number, input: GuestI
 
     try {
       const [row] = await tx<BookingRow[]>`
-        insert into bookings (id, event_type_id, event_title, start_at, end_at, block_start_at, block_end_at,
+        insert into bookings (id, user_id, event_type_id, event_title, start_at, end_at, block_start_at, block_end_at,
           guest_name, guest_email, guest_phone, notes, account_id, calendar_id, google_event_id, meet_link, cancel_token)
-        values (${id}, ${t.id}, ${t.title}, ${new Date(startMs)}, ${new Date(endMs)}, ${new Date(block.start)},
+        values (${id}, ${t.user_id}, ${t.id}, ${t.title}, ${new Date(startMs)}, ${new Date(endMs)}, ${new Date(block.start)},
           ${new Date(block.end)}, ${guest.name}, ${guest.email}, ${guest.phone}, ${guest.notes},
           ${target.accountId}, ${target.calendarId}, ${event.id}, ${event.hangoutLink ?? null},
           ${cancelToken})

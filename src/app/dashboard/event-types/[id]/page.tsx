@@ -7,6 +7,18 @@ import { isPrimaryOwner } from "@/lib/users";
 import { getEventType, getSettings, type EventType } from "@/lib/eventTypes";
 import { deleteEventType, saveEventType } from "../../actions";
 
+function enabledTouches(t: EventType): string[] {
+  return [
+    t.personal_mood && "mood check-in",
+    t.personal_common && "common ground",
+    t.personal_note.trim() && "welcome note",
+    t.personal_goal && "meeting goal",
+    t.personal_walk && "walk-and-talk",
+  ].filter(Boolean) as string[];
+}
+const onCount = (t: EventType) => enabledTouches(t).length;
+const onNames = (t: EventType) => enabledTouches(t).join(", ");
+
 const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
 const DEFAULTS: Omit<EventType, "id" | "user_id"> = {
@@ -33,7 +45,15 @@ const DEFAULTS: Omit<EventType, "id" | "user_id"> = {
   booking_account_id: null,
   booking_calendar_id: null,
   extra_calendars: [],
-  ask_feeling: true,
+  ask_feeling: false,
+  personal_mood: false,
+  personal_common: false,
+  common_prompt: "",
+  common_host_answer: "",
+  personal_note: "",
+  personal_goal: false,
+  personal_walk: false,
+  personalized: false,
 };
 
 export default async function EditEventType({
@@ -137,13 +157,27 @@ export default async function EditEventType({
             )}
           </div>
           <label className="row" style={{ fontWeight: 400 }}>
-            <input type="checkbox" name="ask_feeling" defaultChecked={t.ask_feeling} /> Ask guests &quot;How are you
-            feeling today?&quot; and show them a small wellbeing tip (their answer is never saved or shared)
-          </label>
-          <label className="row" style={{ fontWeight: 400 }}>
             <input type="checkbox" name="active" defaultChecked={t.active} /> Link is on (guests can book)
           </label>
         </div>
+
+        {existing && (
+          <div className="card stack personal-cta">
+            <div className="row spread">
+              <div>
+                <h2 style={{ marginBottom: 4 }}>Personal touches</h2>
+                <p className="small muted" style={{ margin: 0 }}>
+                  {onCount(existing) > 0
+                    ? `${onCount(existing)} on: ${onNames(existing)}.`
+                    : "None yet. Add a mood check-in, common ground, a welcome note and more."}
+                </p>
+              </div>
+              <a className="btn" href={`/dashboard/event-types/${existing.id}/personalize`}>
+                {onCount(existing) > 0 ? "Edit personal touches" : "Make it personal"}
+              </a>
+            </div>
+          </div>
+        )}
 
         <div className="card stack">
           <h2>When you are available</h2>

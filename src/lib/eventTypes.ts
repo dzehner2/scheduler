@@ -32,8 +32,18 @@ export interface EventType {
   booking_calendar_id: string | null;
   /** Calendars that also get a copy of each booking (no invite sent). */
   extra_calendars: CalendarRef[];
-  /** Show the optional "How are you feeling today?" question to guests. */
+  /** Legacy, unused: replaced by personal_mood. */
   ask_feeling: boolean;
+  // Personal touches (opt-in)
+  personal_mood: boolean;
+  personal_common: boolean;
+  common_prompt: string;
+  common_host_answer: string;
+  personal_note: string;
+  personal_goal: boolean;
+  personal_walk: boolean;
+  /** True once the owner has visited the "Make it personal" screen. */
+  personalized: boolean;
 }
 
 export interface CalendarRef {

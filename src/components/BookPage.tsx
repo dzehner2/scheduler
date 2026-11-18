@@ -40,7 +40,13 @@ export default async function BookPage({ handle, slug }: { handle: string | null
           brandName={b.name}
           logoUrl={b.logoUrl}
           vibe={vibeOrDefault(s.vibe)}
-          askFeeling={t.ask_feeling !== false}
+          askFeeling={t.personal_mood === true}
+          personal={{
+            note: t.personal_note,
+            common: t.personal_common && t.common_prompt && t.common_host_answer ? { prompt: t.common_prompt, hostAnswer: t.common_host_answer } : null,
+            goal: t.personal_goal,
+            walk: t.personal_walk,
+          }}
         />
       </main>
       <Footer plain={branded} />

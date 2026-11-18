@@ -60,6 +60,12 @@ export default async function EventTypes({ searchParams }: { searchParams: Promi
             </div>
             <div className="row">
               <CopyLink url={url} />
+              <Link
+                className={t.personalized ? "btn secondary small" : "btn small"}
+                href={`/dashboard/event-types/${t.id}/personalize`}
+              >
+                {t.personalized ? "Personal touches" : "Make it personal"}
+              </Link>
               <Link className="btn secondary small" href={`/dashboard/event-types/${t.id}`}>
                 Edit
               </Link>

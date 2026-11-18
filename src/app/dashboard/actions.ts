@@ -11,6 +11,7 @@ import { validHandle } from "@/lib/users";
 import { isVibe, matchVibe } from "@/lib/vibes";
 import { todayFor } from "@/lib/checkins";
 import { isScale } from "@/lib/wellbeing";
+import { MAX_ANSWER, MAX_NOTE } from "@/lib/personalize";
 import { parseHHMM, type WeeklyHours } from "@/lib/slots";
 
 const int = (v: FormDataEntryValue | null, min: number, max: number, label: string): number => {
@@ -94,6 +95,7 @@ export async function saveEventType(form: FormData) {
   const id = form.get("id") ? Number(form.get("id")) : null;
   const back = `/dashboard/event-types/${id ?? "new"}`;
 
+  let newId: number | null = null;
   let values;
   try {
     const title = String(form.get("title") ?? "").trim();
@@ -176,7 +178,6 @@ export async function saveEventType(form: FormData) {
       location_type,
       location_detail: String(form.get("location_detail") ?? "").trim().slice(0, 500),
       active: form.get("active") === "on",
-      ask_feeling: form.get("ask_feeling") === "on",
       ...brand,
       booking_account_id,
       booking_calendar_id,
@@ -194,7 +195,8 @@ export async function saveEventType(form: FormData) {
       const updated = await sql`update event_types set ${sql(values)} where id = ${id} and user_id = ${me.id}`;
       if (updated.count === 0) throw new Error("not found");
     } else {
-      await sql`insert into event_types ${sql({ ...values, user_id: me.id })}`;
+      const [created] = await sql<{ id: number }[]>`insert into event_types ${sql({ ...values, user_id: me.id })} returning id`;
+      newId = created.id;
     }
   } catch (err) {
     const code = (err as { code?: string }).code;
@@ -202,7 +204,8 @@ export async function saveEventType(form: FormData) {
     redirect(`${back}?error=${encodeURIComponent(msg)}`);
   }
   revalidatePath("/dashboard/event-types");
-  redirect("/dashboard/event-types?saved=1");
+  // New links go straight to the "Make it personal" step.
+  redirect(newId ? `/dashboard/event-types/${newId}/personalize?new=1` : "/dashboard/event-types?saved=1");
 }
 
 export async function deleteEventType(form: FormData) {
@@ -345,4 +348,31 @@ export async function redoCheckIn() {
   await sql`delete from user_checkins where user_id = ${me.id} and day = ${await todayFor(me.id)}`;
   revalidatePath("/dashboard", "layout");
   redirect("/dashboard");
+}
+
+// ---------- Personal touches ----------
+
+export async function savePersonal(form: FormData) {
+  const me = await requireUser();
+  const id = Number(form.get("id"));
+  const on = (k: string) => form.get(k) === "on";
+  const picked = String(form.get("common_prompt") ?? "").trim();
+  const prompt = String(form.get("common_prompt_custom") ?? "").trim() || (picked === "__custom" ? "" : picked);
+  const values = {
+    personal_mood: on("personal_mood"),
+    personal_common: on("personal_common"),
+    common_prompt: prompt.slice(0, 80),
+    common_host_answer: String(form.get("common_host_answer") ?? "").trim().slice(0, MAX_ANSWER),
+    personal_note: on("personal_note_on") ? String(form.get("personal_note") ?? "").trim().slice(0, MAX_NOTE) : "",
+    personal_goal: on("personal_goal"),
+    personal_walk: on("personal_walk"),
+    personalized: true,
+  };
+  if (values.personal_common && (!values.common_prompt || !values.common_host_answer)) {
+    redirect(`/dashboard/event-types/${id}/personalize?error=${encodeURIComponent("For common ground, pick a topic and add your own answer.")}`);
+  }
+  const sql = await db();
+  await sql`update event_types set ${sql(values)} where id = ${id} and user_id = ${me.id}`;
+  revalidatePath("/dashboard/event-types");
+  redirect("/dashboard/event-types?saved=1");
 }

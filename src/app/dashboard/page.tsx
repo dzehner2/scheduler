@@ -90,6 +90,17 @@ export default async function Bookings({ searchParams }: { searchParams: Promise
                     {b.guest_name}
                     <div className="small muted">{b.guest_email}</div>
                     {b.guest_phone && <div className="small muted">{b.guest_phone}</div>}
+                    {b.meeting_goal && (
+                      <div className="small" style={{ marginTop: 4 }}>
+                        <strong>Goal:</strong> {b.meeting_goal}
+                      </div>
+                    )}
+                    {b.common_answer && (
+                      <div className="small" style={{ marginTop: 4 }}>
+                        <strong>In common:</strong> {b.common_answer}
+                      </div>
+                    )}
+                    {b.walk_ok && <div className="small" style={{ marginTop: 4 }}>Up for a walking call</div>}
                     {b.notes && <div className="small" style={{ whiteSpace: "pre-wrap", marginTop: 4 }}>{b.notes}</div>}
                   </td>
                   <td style={{ textAlign: "right" }}>

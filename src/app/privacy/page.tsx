@@ -60,13 +60,19 @@ export default async function Privacy() {
 
           <h2>How you are feeling</h2>
           <p>
-            Booking pages ask guests how they are feeling so PlayDate can suggest a small tip. That answer stays in the
+            Some booking pages ask guests how they are feeling so PlayDate can suggest a small tip. That answer stays in the
             guest&apos;s browser: it is never sent to PlayDate, saved, or shown to anyone.
           </p>
           <p>
             Account holders can do a private daily check-in (energy, stress and mood on a 1 to 5 scale). It is stored
             only to show that person their own tip, is never shown to anyone else, including the operator, and is
             deleted after 30 days.
+          </p>
+
+          <p>
+            Some booking links also invite guests to share optional extras: an answer to a fun question (like a
+            favorite sports team), what would make the meeting great, or that they are up for a walking call. If a
+            guest fills these in, they are saved with the booking and shown only to the person whose link they used.
           </p>
 
           <h2>Footprint estimate</h2>

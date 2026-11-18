@@ -3,13 +3,18 @@ import CopyLink from "@/components/CopyLink";
 import { config } from "@/lib/config";
 import { db } from "@/lib/db";
 import { listEventTypes, locationLabel } from "@/lib/eventTypes";
+import { requireUser } from "@/lib/session";
+import { isPrimaryOwner, linkPath } from "@/lib/users";
 
 export default async function EventTypes({ searchParams }: { searchParams: Promise<{ saved?: string }> }) {
   const { saved } = await searchParams;
-  const types = await listEventTypes();
+  const me = await requireUser();
+  const types = await listEventTypes(me.id);
+  const handle = isPrimaryOwner(me) ? null : me.handle;
   const sql = await db();
   const cals = await sql<{ account_id: number; google_id: string; summary: string; email: string }[]>`
-    select c.account_id, c.google_id, c.summary, a.email from calendars c join accounts a on a.id = c.account_id`;
+    select c.account_id, c.google_id, c.summary, a.email from calendars c join accounts a on a.id = c.account_id
+    where a.user_id = ${me.id}`;
   const calName = (accountId: number | null, calendarId: string | null) => {
     if (!accountId || !calendarId) return null;
     const c = cals.find((x) => x.account_id === accountId && x.google_id === calendarId);
@@ -28,7 +33,7 @@ export default async function EventTypes({ searchParams }: { searchParams: Promi
         <div className="card muted">Create your first booking link, for example a 30 minute intro call.</div>
       )}
       {types.map((t) => {
-        const url = `${config.appUrl}/${t.slug}`;
+        const url = `${config.appUrl}${linkPath(handle, t.slug)}`;
         return (
           <div className="card row spread" key={t.id}>
             <div>
@@ -44,7 +49,7 @@ export default async function EventTypes({ searchParams }: { searchParams: Promi
               {calName(t.booking_account_id, t.booking_calendar_id) && (
                 <div className="muted small">Bookings go on {calName(t.booking_account_id, t.booking_calendar_id)}</div>
               )}
-              <a className="small" href={`/${t.slug}`} target="_blank">
+              <a className="small" href={linkPath(handle, t.slug)} target="_blank">
                 {url}
               </a>
             </div>

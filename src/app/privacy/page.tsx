@@ -13,14 +13,17 @@ export default async function Privacy() {
           <h1>Privacy policy</h1>
           <p className="muted small">Last updated {LEGAL_UPDATED}</p>
           <p>
-            PlayDate is a personal scheduling tool operated by {name}. This policy explains what information it
-            uses and why.
+            PlayDate is a small scheduling service operated by {name}. A few people have their own PlayDate account
+            and booking links. This policy explains what information PlayDate uses and why.
           </p>
 
           <h2>Information from Google accounts</h2>
-          <p>Only the owner of this PlayDate connects Google accounts. For each connected account, PlayDate:</p>
+          <p>
+            Each PlayDate user connects their own Google accounts. A user&apos;s calendar data is used only to run that
+            user&apos;s own booking pages, and is never shown to other users. For each connected account, PlayDate:
+          </p>
           <ul>
-            <li>reads the account&apos;s email address, to know which account is connected;</li>
+            <li>reads the account&apos;s email address, to know which account is connected and to sign you in;</li>
             <li>reads the list of calendars, so the owner can choose which ones count as busy;</li>
             <li>reads free and busy times on the chosen calendars. It does not read event titles, descriptions or attendees;</li>
             <li>creates, and on cancellation deletes, booking events on the one calendar the owner picks for bookings.</li>
@@ -42,8 +45,34 @@ export default async function Privacy() {
           <p>
             When you book a time, you give your name, email address, and, if you choose or the meeting requires it,
             a phone number and notes. This is stored so the meeting can be scheduled, shown to {name}, and included
-            in the calendar invitation Google sends you. It is not sold, shared with third parties, or used for
-            marketing lists.
+            in the calendar invitation Google sends you. It is visible only to the person whose link you used. It is
+            not sold, shared with third parties, or used for marketing lists.
+          </p>
+
+          <h2>PlayDate accounts</h2>
+          <p>
+            If you sign up, PlayDate stores your email, your PlayDate address, your settings, and, if you share it,
+            your favorite show (used only to pick your page style). The operator can see account emails and how many
+            links and bookings each account has, but not your calendars or booking details. You can delete your
+            account at any time from Calendars and settings; this removes your connected accounts, links and booking
+            records from PlayDate.
+          </p>
+
+          <h2>How you are feeling</h2>
+          <p>
+            Booking pages ask guests how they are feeling so PlayDate can suggest a small tip. That answer stays in the
+            guest&apos;s browser: it is never sent to PlayDate, saved, or shown to anyone.
+          </p>
+          <p>
+            Account holders can do a private daily check-in (energy, stress and mood on a 1 to 5 scale). It is stored
+            only to show that person their own tip, is never shown to anyone else, including the operator, and is
+            deleted after 30 days.
+          </p>
+
+          <h2>Footprint estimate</h2>
+          <p>
+            To estimate PlayDate&apos;s energy use, it counts page views and requests per account per day. These are
+            totals only, with no IP addresses or details about visitors.
           </p>
 
           <h2>Waitlist</h2>
@@ -66,8 +95,8 @@ export default async function Privacy() {
             {contact ? <a href={`mailto:${contact}`}>{contact}</a> : name}.
           </p>
           <p>
-            The owner can disconnect a Google account in PlayDate at any time, which deletes its stored tokens and
-            calendar list. Access can also be revoked from{" "}
+            You can disconnect a Google account in PlayDate at any time, which deletes its stored tokens and calendar
+            list. Access can also be revoked from{" "}
             <a href="https://myaccount.google.com/permissions" target="_blank" rel="noreferrer">
               your Google account permissions
             </a>
@@ -75,7 +104,7 @@ export default async function Privacy() {
           </p>
 
           <h2>Cookies</h2>
-          <p>PlayDate uses one cookie to keep the owner signed in. It does not use tracking or advertising cookies.</p>
+          <p>PlayDate uses one cookie to keep you signed in to your account. It does not use tracking or advertising cookies.</p>
 
           <h2>Contact</h2>
           <p>Questions about this policy: {contact ? <a href={`mailto:${contact}`}>{contact}</a> : name}.</p>

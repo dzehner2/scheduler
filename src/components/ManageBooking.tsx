@@ -9,7 +9,7 @@ interface Props {
   start: string;
   cancelled: boolean;
   past: boolean;
-  rebookSlug: string | null;
+  rebookPath: string | null;
   branded?: boolean;
 }
 
@@ -34,7 +34,7 @@ export default function ManageBooking(p: Props) {
       return;
     }
     setCancelled(true);
-    if (thenRebook && p.rebookSlug) window.location.href = `/${p.rebookSlug}`;
+    if (thenRebook && p.rebookPath) window.location.href = p.rebookPath;
   }
 
   const when = DateTime.fromISO(p.start, { zone }).toFormat("cccc, LLLL d, h:mm a");
@@ -48,13 +48,13 @@ export default function ManageBooking(p: Props) {
       {cancelled ? (
         <>
           <div className="alert info">{p.branded ? "This meeting is cancelled." : "This play date is cancelled."}</div>
-          {p.rebookSlug && <a className="btn" href={`/${p.rebookSlug}`}>Book a new time</a>}
+          {p.rebookPath && <a className="btn" href={p.rebookPath}>Book a new time</a>}
         </>
       ) : p.past ? (
         <p className="muted">This meeting has already happened.</p>
       ) : (
         <div className="row">
-          {p.rebookSlug && (
+          {p.rebookPath && (
             <button className="btn" disabled={busy} onClick={() => cancel(true)}>
               Reschedule
             </button>
@@ -64,7 +64,7 @@ export default function ManageBooking(p: Props) {
           </button>
         </div>
       )}
-      {!cancelled && !p.past && p.rebookSlug && (
+      {!cancelled && !p.past && p.rebookPath && (
         <p className="small muted">Reschedule cancels this time, then lets you pick a new one.</p>
       )}
     </div>

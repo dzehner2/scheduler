@@ -1,6 +1,7 @@
 import Link from "next/link";
 import Footer from "@/components/Footer";
 import Logo from "@/components/Logo";
+import QuoteRotator from "@/components/QuoteRotator";
 import { siteOperator } from "@/lib/site";
 
 export const dynamic = "force-dynamic";
@@ -13,6 +14,7 @@ export default async function Home() {
       <main className="container narrow">
         <div className="card stack hero" style={{ marginTop: 56 }}>
           <Logo />
+          <QuoteRotator />
           <p className="lead">
             Remember when making plans was easy? We used to just call each other&apos;s landlines, or walk over and
             knock on the door.

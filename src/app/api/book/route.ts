@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { CalendarUnavailableError } from "@/lib/accounts";
 import { BookingError, createBooking } from "@/lib/booking";
 import { getEventTypeBySlug } from "@/lib/eventTypes";
+import { recordUsage } from "@/lib/usage";
 
 export async function POST(req: NextRequest) {
   let body: Record<string, unknown>;
@@ -13,8 +14,9 @@ export async function POST(req: NextRequest) {
   // Honeypot: real people never fill this hidden field.
   if (body.website) return NextResponse.json({ error: "Invalid request" }, { status: 400 });
 
-  const t = await getEventTypeBySlug(String(body.type ?? ""));
+  const t = await getEventTypeBySlug(body.u ? String(body.u) : null, String(body.type ?? ""));
   if (!t) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  await recordUsage(t.user_id, "api");
   const start = Date.parse(String(body.start ?? ""));
   if (!Number.isFinite(start)) return NextResponse.json({ error: "Invalid time" }, { status: 400 });
 

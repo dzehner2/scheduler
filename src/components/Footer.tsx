@@ -9,7 +9,7 @@ export default function Footer({ plain = false }: { plain?: boolean }) {
             <Link href="/">PlayDate</Link> ·{" "}
           </>
         )}
-        <Link href="/privacy">Privacy</Link> · <Link href="/terms">Terms</Link>
+        <Link href="/privacy">Privacy</Link> · <Link href="/terms">Terms</Link> · <Link href="/footprint">Footprint</Link>
         {!plain && <div className="rewind">Be kind, rewind.</div>}
       </div>
     </footer>

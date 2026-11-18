@@ -1,7 +1,12 @@
 import { db } from "@/lib/db";
+import { config } from "@/lib/config";
 import { getSettings } from "@/lib/eventTypes";
+import { requireUser } from "@/lib/session";
+import { isPrimaryOwner } from "@/lib/users";
+import { vibeOrDefault } from "@/lib/vibes";
+import VibePicker from "@/components/VibePicker";
 import ConfirmButton from "@/components/ConfirmButton";
-import { disconnectAccount, refreshCalendars, saveSettings, toggleCalendar } from "../actions";
+import { deleteMyAccount, disconnectAccount, refreshCalendars, saveHandle, saveSettings, toggleCalendar } from "../actions";
 
 interface Row {
   account_id: number;
@@ -18,14 +23,17 @@ interface Row {
 export default async function Calendars({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string; saved?: string; connected?: string }>;
+  searchParams: Promise<{ error?: string; saved?: string; connected?: string; welcome?: string }>;
 }) {
-  const { error, saved, connected } = await searchParams;
+  const { error, saved, connected, welcome } = await searchParams;
+  const me = await requireUser();
+  const atRoot = isPrimaryOwner(me);
   const sql = await db();
-  const settings = await getSettings();
+  const settings = await getSettings(me.id);
   const rows = await sql<Row[]>`
     select a.id as account_id, a.email, a.status, a.last_error, c.google_id, c.summary, c.color, c.access_role, c.check_conflicts
     from accounts a left join calendars c on c.account_id = a.id
+    where a.user_id = ${me.id}
     order by a.created_at, a.email, (c.google_id = a.email) desc, c.summary`;
 
   const accounts = new Map<number, { email: string; status: string; last_error: string | null; cals: Row[] }>();
@@ -40,6 +48,12 @@ export default async function Calendars({
   return (
     <>
       <h1>Calendars and settings</h1>
+      {welcome && (
+        <div className="alert ok">
+          Welcome to PlayDate! Three quick steps: check which calendars count as busy, add your name and time zone
+          below, then create your first booking link under Booking links.
+        </div>
+      )}
       <p className="muted">
         Every checked calendar, on every connected account, is treated as busy. Times are only offered when all of
         them are free.
@@ -114,6 +128,35 @@ export default async function Calendars({
         </a>
       </div>
 
+      {!atRoot && (
+        <form className="card stack" action={saveHandle}>
+          <h2>Your PlayDate address</h2>
+          <p className="muted small">
+            Your booking links start with this. Changing it breaks links you have already shared.
+          </p>
+          <div className="row" style={{ flexWrap: "nowrap" }}>
+            <span className="muted small" style={{ whiteSpace: "nowrap" }}>{config.appUrl.replace(/^https?:\/\//, "")}/</span>
+            <input name="handle" type="text" defaultValue={me.handle ?? ""} pattern="[a-z0-9][a-z0-9\-]{1,30}" required aria-label="Your address" />
+            <button className="btn secondary small">Save</button>
+          </div>
+        </form>
+      )}
+
+      <div className="card stack">
+        <h2>Your vibe</h2>
+        <p className="muted small">
+          {settings.favorite_show ? (
+            <>
+              Favorite show: {settings.favorite_show}. <a href="/dashboard/welcome">Change</a>
+            </>
+          ) : (
+            <a href="/dashboard/welcome">Tell us your favorite &apos;80s or &apos;90s show</a>
+          )}
+          {" "}Applies to your PlayDate-style links and this dashboard. Company-branded links keep their branding.
+        </p>
+        <VibePicker current={vibeOrDefault(settings.vibe)} />
+      </div>
+
       <form className="card stack" action={saveSettings}>
         <h2>Settings</h2>
         <div className="grid2">
@@ -152,6 +195,18 @@ export default async function Calendars({
           <button className="btn">Save settings</button>
         </div>
       </form>
+      {me.role === "user" && (
+        <form className="card stack" action={deleteMyAccount}>
+          <h2>Delete my PlayDate account</h2>
+          <p className="muted small">
+            Removes your connected Google accounts, booking links and booking records from PlayDate. Events already on
+            your Google Calendar stay there.
+          </p>
+          <div>
+            <ConfirmButton message="Delete your PlayDate account? This cannot be undone.">Delete my account</ConfirmButton>
+          </div>
+        </form>
+      )}
     </>
   );
 }

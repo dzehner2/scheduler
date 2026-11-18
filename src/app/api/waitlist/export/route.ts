@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { currentOwner } from "@/lib/session";
+import { currentUser } from "@/lib/session";
 
 const cell = (v: string) => {
   // Quote for CSV, and stop spreadsheet apps from treating text as a formula.
@@ -9,7 +9,7 @@ const cell = (v: string) => {
 };
 
 export async function GET() {
-  if (!(await currentOwner())) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  if ((await currentUser())?.role !== "admin") return NextResponse.json({ error: "Not found" }, { status: 404 });
   const sql = await db();
   const rows = await sql<{ name: string; email: string; use_case: string; created_at: Date }[]>`
     select name, email, use_case, created_at from waitlist order by created_at`;

@@ -2,11 +2,13 @@ import { DateTime } from "luxon";
 import ConfirmButton from "@/components/ConfirmButton";
 import { db } from "@/lib/db";
 import { getSettings } from "@/lib/eventTypes";
+import { requireAdmin } from "@/lib/session";
 import { removeWaitlistEntry } from "../actions";
 
 export default async function Waitlist() {
   const sql = await db();
-  const { time_zone } = await getSettings();
+  const me = await requireAdmin();
+  const { time_zone } = await getSettings(me.id);
   const rows = await sql<{ id: number; name: string; email: string; use_case: string; created_at: Date }[]>`
     select * from waitlist order by created_at desc`;
   const coffee = !!process.env.COFFEE_URL;

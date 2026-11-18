@@ -1,8 +1,12 @@
 "use client";
 import { DateTime } from "luxon";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { VIBES, type VibeId } from "@/lib/vibes";
+import { FEELINGS, GUEST_TIPS, type Feeling } from "@/lib/wellbeing";
 
 interface Props {
+  /** null for the primary owner's root links */
+  handle: string | null;
   slug: string;
   title: string;
   description: string;
@@ -14,19 +18,18 @@ interface Props {
   branded?: boolean;
   brandName?: string;
   logoUrl?: string;
+  vibe?: VibeId;
 }
 
-const PLAYDATE_COPY = {
-  pick: "Pick a time to come over",
+const BASE_COPY = {
   loading: "Ringing the calendar...",
   empty: "Nobody's home this week. Try the next one.",
   details: "Who's calling?",
   submit: "Lock it in",
   submitting: "Dialing...",
-  done: "It's a play date!",
   doneNote: "See you then. A calendar invitation is on its way to your inbox.",
 };
-const BRAND_COPY: typeof PLAYDATE_COPY = {
+const BRAND_COPY = {
   pick: "Select a date and time",
   loading: "Checking availability...",
   empty: "No open times this week. Try the next week.",
@@ -40,7 +43,8 @@ const BRAND_COPY: typeof PLAYDATE_COPY = {
 type Step = "pick" | "form" | "done";
 
 export default function BookingWidget(p: Props) {
-  const C = p.branded ? BRAND_COPY : PLAYDATE_COPY;
+  const v = VIBES[p.vibe ?? "mall"];
+  const C = p.branded ? BRAND_COPY : { ...BASE_COPY, pick: v.pick, done: v.done };
   const [zone, setZone] = useState<string>("UTC");
   const [zones, setZones] = useState<string[]>([]);
   const [weekStart, setWeekStart] = useState<DateTime | null>(null);
@@ -53,6 +57,9 @@ export default function BookingWidget(p: Props) {
   const [formError, setFormError] = useState<string | null>(null);
   const [result, setResult] = useState<{ id: string; token: string } | null>(null);
   const [autoAdvance, setAutoAdvance] = useState(6);
+  // Stays in this browser only: never stored or sent to the server.
+  const [feeling, setFeeling] = useState<Feeling | null>(null);
+  const tip = feeling ? GUEST_TIPS[feeling] : null;
 
   // Detect the guest's time zone on the client only.
   useEffect(() => {
@@ -71,7 +78,7 @@ export default function BookingWidget(p: Props) {
     const end = start.plus({ days: 7 });
     try {
       const res = await fetch(
-        `/api/slots?type=${encodeURIComponent(p.slug)}&start=${encodeURIComponent(start.toUTC().toISO()!)}&end=${encodeURIComponent(end.toUTC().toISO()!)}`,
+        `/api/slots?${p.handle ? `u=${encodeURIComponent(p.handle)}&` : ""}type=${encodeURIComponent(p.slug)}&start=${encodeURIComponent(start.toUTC().toISO()!)}&end=${encodeURIComponent(end.toUTC().toISO()!)}`,
         { cache: "no-store" },
       );
       const body = await res.json();
@@ -81,7 +88,7 @@ export default function BookingWidget(p: Props) {
       setLoadError(err instanceof Error ? err.message : "Could not load times.");
       setSlots([]);
     }
-  }, [p.slug]);
+  }, [p.slug, p.handle]);
 
   useEffect(() => {
     if (weekStart) load(weekStart);
@@ -130,7 +137,7 @@ export default function BookingWidget(p: Props) {
       const res = await fetch("/api/book", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...Object.fromEntries(f), type: p.slug, start: slot }),
+        body: JSON.stringify({ ...Object.fromEntries(f), u: p.handle, type: p.slug, start: slot }),
       });
       const body = await res.json();
       if (!res.ok) {
@@ -168,9 +175,33 @@ export default function BookingWidget(p: Props) {
           <br />
           {p.location}
         </p>
-        {!p.branded && <p className="tagline">Like ringing the landline, minus the busy signal.</p>}
+        {!p.branded && <p className="tagline">{v.tagline}</p>}
         {p.description && <p style={{ whiteSpace: "pre-wrap" }}>{p.description}</p>}
         {slot && step !== "pick" && <p><strong>{fmtFull(slot)}</strong></p>}
+        <div className="feel">
+          <div className="feel-q" id="feel-q">How are you feeling today?</div>
+          <div className="feel-options" role="radiogroup" aria-labelledby="feel-q">
+            {FEELINGS.map((f) => (
+              <button
+                key={f.id}
+                type="button"
+                role="radio"
+                aria-checked={feeling === f.id}
+                className={`feel-chip${feeling === f.id ? " on" : ""}`}
+                onClick={() => setFeeling(feeling === f.id ? null : f.id)}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
+          {tip && (
+            <div className="feel-tip" aria-live="polite">
+              <p>{tip.text}</p>
+              <p className="feel-source">{tip.source}</p>
+            </div>
+          )}
+          <p className="feel-note">Just for you. Your answer stays on this screen and is never saved or shared.</p>
+        </div>
       </div>
 
       <div className="pick">

@@ -80,6 +80,8 @@ alter table event_types add column if not exists booking_account_id int referenc
 alter table event_types add column if not exists booking_calendar_id text;
 -- Extra calendars that get a silent copy of each booking: [{"account_id": 1, "calendar_id": "..."}]
 alter table event_types add column if not exists extra_calendars jsonb not null default '[]';
+-- Show the optional "How are you feeling today?" question on this link
+alter table event_types add column if not exists ask_feeling boolean not null default true;
 
 create table if not exists waitlist (
   id serial primary key,

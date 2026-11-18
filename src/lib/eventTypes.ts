@@ -32,6 +32,8 @@ export interface EventType {
   booking_calendar_id: string | null;
   /** Calendars that also get a copy of each booking (no invite sent). */
   extra_calendars: CalendarRef[];
+  /** Show the optional "How are you feeling today?" question to guests. */
+  ask_feeling: boolean;
 }
 
 export interface CalendarRef {

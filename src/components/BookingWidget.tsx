@@ -19,6 +19,8 @@ interface Props {
   brandName?: string;
   logoUrl?: string;
   vibe?: VibeId;
+  /** Show the optional feeling question (on by default). */
+  askFeeling?: boolean;
 }
 
 const BASE_COPY = {
@@ -178,6 +180,7 @@ export default function BookingWidget(p: Props) {
         {!p.branded && <p className="tagline">{v.tagline}</p>}
         {p.description && <p style={{ whiteSpace: "pre-wrap" }}>{p.description}</p>}
         {slot && step !== "pick" && <p><strong>{fmtFull(slot)}</strong></p>}
+        {p.askFeeling !== false && (
         <div className="feel">
           <div className="feel-q" id="feel-q">How are you feeling today?</div>
           <div className="feel-options" role="radiogroup" aria-labelledby="feel-q">
@@ -202,6 +205,7 @@ export default function BookingWidget(p: Props) {
           )}
           <p className="feel-note">Just for you. Your answer stays on this screen and is never saved or shared.</p>
         </div>
+        )}
       </div>
 
       <div className="pick">

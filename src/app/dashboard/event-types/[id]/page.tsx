@@ -33,6 +33,7 @@ const DEFAULTS: Omit<EventType, "id" | "user_id"> = {
   booking_account_id: null,
   booking_calendar_id: null,
   extra_calendars: [],
+  ask_feeling: true,
 };
 
 export default async function EditEventType({
@@ -135,6 +136,10 @@ export default async function EditEventType({
               </div>
             )}
           </div>
+          <label className="row" style={{ fontWeight: 400 }}>
+            <input type="checkbox" name="ask_feeling" defaultChecked={t.ask_feeling} /> Ask guests &quot;How are you
+            feeling today?&quot; and show them a small wellbeing tip (their answer is never saved or shared)
+          </label>
           <label className="row" style={{ fontWeight: 400 }}>
             <input type="checkbox" name="active" defaultChecked={t.active} /> Link is on (guests can book)
           </label>

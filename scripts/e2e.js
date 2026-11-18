@@ -132,6 +132,12 @@ const set = (q) => fetch(`${FAKE}/__set?${q}`);
     await guest.click("text=Next");
     await guest.waitForTimeout(600);
   }
+  // Guest feeling question: tip appears, and the answer is never sent anywhere
+  const sentBodies = [];
+  guest.on("request", (r) => { if (r.method() === "POST") sentBodies.push(r.postData() || ""); });
+  await guest.click(".feel-chip:has-text('Stressed')");
+  check((await guest.textContent(".feel-tip")).includes("slow breathing"), "guest picks a feeling and gets a science-backed tip");
+  check((await guest.textContent(".feel-tip")).includes("Zaccaro"), "tip cites its source");
   await guest.screenshot({ path: `${OUT}/shot-booking.png` });
   const firstTime = await guest.locator(".time").first().textContent();
   check(firstTime.trim() === "12:00 PM", `guest in New York sees 9:00 Pacific as ${firstTime.trim()}`);
@@ -143,6 +149,7 @@ const set = (q) => fetch(`${FAKE}/__set?${q}`);
   await guest.waitForSelector("text=It's a play date!");
   await guest.screenshot({ path: `${OUT}/shot-confirmed.png` });
   check(true, "guest booking confirmed");
+  check(sentBodies.length > 0 && !sentBodies.some((b) => /stressed|feel/i.test(b)), "guest's feeling is never sent to the server");
 
   const evs = await (await fetch(`${FAKE}/__events`)).json();
   const created = (evs["dan@work.test"] || []).find((e) => e.summary === "Intro call with Riley Retailer");
@@ -230,6 +237,27 @@ const set = (q) => fetch(`${FAKE}/__set?${q}`);
   check((await owner.textContent("body")).includes("Night Patrol"), "owner's favorite show maps to the Night Patrol vibe");
   await owner.click("text=Looks good, keep going");
   await owner.waitForURL(/calendars/);
+  // Private daily check-in appears once the favorite show is answered
+  await owner.goto(`${APP}/dashboard`);
+  check((await owner.locator(".checkin").count()) === 1, "owner is asked the daily check-in");
+  await owner.click(".checkin fieldset:has(legend:text('Energy')) .scale-dot:has-text('2')");
+  await owner.click(".checkin fieldset:has(legend:text('Stress')) .scale-dot:has-text('5')");
+  await owner.click(".checkin fieldset:has(legend:text('Mood')) .scale-dot:has-text('3')");
+  await owner.click(".checkin button:has-text('Check in')");
+  await owner.waitForURL(/checkin=1/);
+  check((await owner.textContent("body")).includes("10 minute gap"), "check-in gives the owner a private tip");
+  check((await owner.locator(".checkin").count()) === 0, "check-in is not asked again the same day");
+  await owner.screenshot({ path: `${OUT}/shot-checkin-tip.png` });
+  await owner.goto(`${APP}/dashboard/footprint`);
+  const fp = await owner.textContent("body");
+  check(/Wh|kWh/.test(fp) && fp.includes("Suggested donation") && fp.includes("One Tree Planted"), "owner sees their footprint and a suggested donation");
+  check((await owner.getAttribute("a:has-text('Donate to One Tree Planted')", "href")) === "https://onetreeplanted.org/", "donate button goes straight to One Tree Planted");
+  await owner.screenshot({ path: `${OUT}/shot-footprint.png`, fullPage: true });
+  const pubFp = await browser.newPage();
+  const pubRes = await pubFp.goto(`${APP}/footprint`);
+  check(pubRes.status() === 200 && (await pubFp.textContent("body")).includes("Our footprint"), "public footprint page shows app totals");
+  check(!/dan@|riley|casey/i.test(await pubFp.textContent("body")), "public footprint page shows no personal details");
+
   const homeVibe = await browser.newPage();
   await homeVibe.goto(`${APP}/`);
   check((await homeVibe.getAttribute("body", "class")) === "vibe-night-patrol", "homepage uses the owner's vibe");
@@ -278,6 +306,7 @@ const set = (q) => fetch(`${FAKE}/__set?${q}`);
   check(!jlinks.includes("Site walk") && !jlinks.includes("Intro call"), "new user does not see the owner's links");
   await jp.goto(`${APP}/dashboard`);
   check(!(await jp.textContent("body")).includes("Riley") && !(await jp.textContent("body")).includes("Casey"), "new user does not see the owner's bookings");
+  check(!(await jp.textContent("body")).includes("10 minute gap") && (await jp.locator(".checkin").count()) === 1, "new user gets their own check-in, never the owner's");
   for (const path of ["/dashboard/event-types/1", "/dashboard/users", "/dashboard/waitlist"]) {
     await jp.goto(`${APP}${path}`);
     check((await jp.textContent("body")).includes("Wrong number"), `new user is blocked from ${path}`);

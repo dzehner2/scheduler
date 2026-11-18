@@ -58,6 +58,23 @@ export default async function Privacy() {
             records from PlayDate.
           </p>
 
+          <h2>How you are feeling</h2>
+          <p>
+            Booking pages ask guests how they are feeling so PlayDate can suggest a small tip. That answer stays in the
+            guest&apos;s browser: it is never sent to PlayDate, saved, or shown to anyone.
+          </p>
+          <p>
+            Account holders can do a private daily check-in (energy, stress and mood on a 1 to 5 scale). It is stored
+            only to show that person their own tip, is never shown to anyone else, including the operator, and is
+            deleted after 30 days.
+          </p>
+
+          <h2>Footprint estimate</h2>
+          <p>
+            To estimate PlayDate&apos;s energy use, it counts page views and requests per account per day. These are
+            totals only, with no IP addresses or details about visitors.
+          </p>
+
           <h2>Waitlist</h2>
           <p>
             If you join the waitlist, PlayDate stores your name, email and, if you give it, what you would use

@@ -6,6 +6,7 @@ const links = [
   { href: "/dashboard", label: "Bookings" },
   { href: "/dashboard/event-types", label: "Booking links" },
   { href: "/dashboard/calendars", label: "Calendars and settings" },
+  { href: "/dashboard/footprint", label: "Footprint" },
 ];
 const adminLinks = [
   { href: "/dashboard/users", label: "Users" },

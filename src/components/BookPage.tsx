@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import BookingWidget from "@/components/BookingWidget";
 import Footer from "@/components/Footer";
 import { vibeOrDefault } from "@/lib/vibes";
+import { recordUsage } from "@/lib/usage";
 import { brandingFor, brandStyle, getEventTypeBySlug, getSettings, locationLabel } from "@/lib/eventTypes";
 
 /** Public booking page, shared by /slug (primary owner) and /handle/slug (everyone else). */
@@ -16,6 +17,7 @@ export default async function BookPage({ handle, slug }: { handle: string | null
   const t = await getEventTypeBySlug(handle, slug);
   if (!t || !t.active) notFound();
   const s = await getSettings(t.user_id);
+  await recordUsage(t.user_id, "page");
   const b = brandingFor(t);
   const branded = b.theme === "brand";
   return (

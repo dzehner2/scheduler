@@ -6,6 +6,7 @@ import { getSettings } from "@/lib/eventTypes";
 import { requireUser } from "@/lib/session";
 import { vibeOrDefault } from "@/lib/vibes";
 import CheckInCard from "@/components/CheckInCard";
+import { recordUsage } from "@/lib/usage";
 import { todaysCheckIn } from "@/lib/checkins";
 
 export const dynamic = "force-dynamic";
@@ -13,6 +14,7 @@ export const dynamic = "force-dynamic";
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const me = await requireUser();
   const mySettings = await getSettings(me.id);
+  await recordUsage(me.id, "page");
   const vibe = vibeOrDefault(mySettings.vibe);
   const checkIn = mySettings.favorite_show ? await todaysCheckIn(me.id) : null;
   const sql = await db();

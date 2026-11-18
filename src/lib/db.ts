@@ -129,6 +129,15 @@ alter table settings add column if not exists signup_limit int not null default 
 alter table user_settings add column if not exists vibe text not null default 'mall';
 alter table user_settings add column if not exists favorite_show text not null default '';
 
+-- Daily usage counts per user, for the footprint estimate (counts only, no visitor details)
+create table if not exists usage_daily (
+  user_id int not null references users(id) on delete cascade,
+  day date not null,
+  page_views int not null default 0,
+  api_calls int not null default 0,
+  primary key (user_id, day)
+);
+
 -- Private daily check-in for each user (kept 30 days)
 create table if not exists user_checkins (
   user_id int not null references users(id) on delete cascade,

@@ -3,6 +3,7 @@ import { busyTime, CalendarUnavailableError } from "@/lib/accounts";
 import { db } from "@/lib/db";
 import { getEventTypeBySlug, getSettings, rulesFor } from "@/lib/eventTypes";
 import { generateSlots } from "@/lib/slots";
+import { recordUsage } from "@/lib/usage";
 
 export const dynamic = "force-dynamic";
 
@@ -20,6 +21,7 @@ export async function GET(req: NextRequest) {
   }
 
   const settings = await getSettings(t.user_id);
+  await recordUsage(t.user_id, "api");
   const now = Date.now();
   const from = Math.max(start, now);
   if (from >= end) return NextResponse.json({ slots: [] });

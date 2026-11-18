@@ -9,7 +9,7 @@ describe("guest tips", () => {
     }
   });
   it("points people who are struggling to 988", () => {
-    expect(GUEST_TIPS.struggling.source).toContain("988");
+    expect(GUEST_TIPS.struggling.text).toContain("988");
   });
   it("contains no em dashes", () => {
     expect(JSON.stringify(GUEST_TIPS)).not.toContain("—");

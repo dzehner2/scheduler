@@ -44,8 +44,8 @@ export const GUEST_TIPS: Record<Feeling, Tip> = {
     source: "Zaccaro et al., Frontiers in Human Neuroscience, 2018",
   },
   struggling: {
-    text: "It is completely okay to pick a later day, or to reach out to someone you trust. You do not have to push through alone.",
-    source: "If you are in the US and need support now, call or text 988 (Suicide & Crisis Lifeline).",
+    text: "It is completely okay to pick a later day, or to reach out to someone you trust. You do not have to push through alone. If you are in the US and need support now, call or text 988 (Suicide & Crisis Lifeline).",
+    source: "988 Suicide & Crisis Lifeline",
   },
 };
 

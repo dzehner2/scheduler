@@ -81,7 +81,17 @@ alter table event_types add column if not exists booking_calendar_id text;
 -- Extra calendars that get a silent copy of each booking: [{"account_id": 1, "calendar_id": "..."}]
 alter table event_types add column if not exists extra_calendars jsonb not null default '[]';
 -- Show the optional "How are you feeling today?" question on this link
-alter table event_types add column if not exists ask_feeling boolean not null default true;
+alter table event_types add column if not exists ask_feeling boolean not null default true; -- replaced by personal_mood
+
+-- Personal touches (all opt-in, set on the "Make it personal" screen)
+alter table event_types add column if not exists personal_mood boolean not null default false;
+alter table event_types add column if not exists personal_common boolean not null default false;
+alter table event_types add column if not exists common_prompt text not null default '';
+alter table event_types add column if not exists common_host_answer text not null default '';
+alter table event_types add column if not exists personal_note text not null default '';
+alter table event_types add column if not exists personal_goal boolean not null default false;
+alter table event_types add column if not exists personal_walk boolean not null default false;
+alter table event_types add column if not exists personalized boolean not null default false;
 
 create table if not exists waitlist (
   id serial primary key,
@@ -114,6 +124,10 @@ create table if not exists bookings (
 );
 create index if not exists bookings_confirmed_time on bookings (block_start_at, block_end_at) where status = 'confirmed';
 alter table bookings add column if not exists extra_events jsonb not null default '[]';
+-- Optional answers a guest chose to share with the host
+alter table bookings add column if not exists common_answer text not null default '';
+alter table bookings add column if not exists meeting_goal text not null default '';
+alter table bookings add column if not exists walk_ok boolean not null default false;
 
 -- ---------- Multiple users ----------
 create table if not exists users (

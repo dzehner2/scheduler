@@ -3,6 +3,7 @@ import { DateTime } from "luxon";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { VIBES, type VibeId } from "@/lib/vibes";
 import { FEELINGS, GUEST_TIPS, type Feeling } from "@/lib/wellbeing";
+import { MAX_ANSWER, MAX_GOAL, sameAnswer } from "@/lib/personalize";
 
 interface Props {
   /** null for the primary owner's root links */
@@ -21,6 +22,13 @@ interface Props {
   vibe?: VibeId;
   /** Show the optional feeling question (on by default). */
   askFeeling?: boolean;
+  /** Personal touches turned on by the link owner. */
+  personal?: {
+    note: string;
+    common: { prompt: string; hostAnswer: string } | null;
+    goal: boolean;
+    walk: boolean;
+  };
 }
 
 const BASE_COPY = {
@@ -58,6 +66,8 @@ export default function BookingWidget(p: Props) {
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [result, setResult] = useState<{ id: string; token: string } | null>(null);
+  const [commonAnswer, setCommonAnswer] = useState("");
+  const host = p.hostName || "your host";
   const [autoAdvance, setAutoAdvance] = useState(6);
   // Stays in this browser only: never stored or sent to the server.
   const [feeling, setFeeling] = useState<Feeling | null>(null);
@@ -139,7 +149,7 @@ export default function BookingWidget(p: Props) {
       const res = await fetch("/api/book", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...Object.fromEntries(f), u: p.handle, type: p.slug, start: slot }),
+        body: JSON.stringify({ ...Object.fromEntries(f), walkOk: f.get("walkOk") === "1", u: p.handle, type: p.slug, start: slot }),
       });
       const body = await res.json();
       if (!res.ok) {
@@ -178,9 +188,15 @@ export default function BookingWidget(p: Props) {
           {p.location}
         </p>
         {!p.branded && <p className="tagline">{v.tagline}</p>}
+        {p.personal?.note && (
+          <blockquote className="host-note">
+            {p.personal.note}
+            {p.hostName && <span className="host-note-by">{p.hostName}</span>}
+          </blockquote>
+        )}
         {p.description && <p style={{ whiteSpace: "pre-wrap" }}>{p.description}</p>}
         {slot && step !== "pick" && <p><strong>{fmtFull(slot)}</strong></p>}
-        {p.askFeeling !== false && (
+        {p.askFeeling === true && (
         <div className="feel">
           <div className="feel-q" id="feel-q">How are you feeling today?</div>
           <div className="feel-options" role="radiogroup" aria-labelledby="feel-q">
@@ -200,7 +216,6 @@ export default function BookingWidget(p: Props) {
           {tip && (
             <div className="feel-tip" aria-live="polite">
               <p>{tip.text}</p>
-              <p className="feel-source">{tip.source}</p>
             </div>
           )}
           <p className="feel-note">Just for you. Your answer stays on this screen and is never saved or shared.</p>
@@ -276,6 +291,36 @@ export default function BookingWidget(p: Props) {
                 <label htmlFor="phone">Phone number</label>
                 <input id="phone" name="phone" type="tel" required autoComplete="tel" />
               </div>
+            )}
+            {p.personal?.goal && (
+              <div>
+                <label htmlFor="meeting_goal">What would make this time great for you? (optional)</label>
+                <textarea id="meeting_goal" name="meetingGoal" maxLength={MAX_GOAL} style={{ minHeight: 64 }} />
+              </div>
+            )}
+            {p.personal?.common && (
+              <div className="common">
+                <div className="common-host">
+                  {host}&apos;s {p.personal.common.prompt.toLowerCase()}: <strong>{p.personal.common.hostAnswer}</strong>
+                </div>
+                <label htmlFor="common_answer">What&apos;s yours? (optional)</label>
+                <input
+                  id="common_answer"
+                  name="commonAnswer"
+                  type="text"
+                  maxLength={MAX_ANSWER}
+                  value={commonAnswer}
+                  onChange={(e) => setCommonAnswer(e.target.value)}
+                />
+                {sameAnswer(commonAnswer, p.personal.common.hostAnswer) && (
+                  <div className="common-match">Same pick! That&apos;s a great start.</div>
+                )}
+              </div>
+            )}
+            {p.personal?.walk && (
+              <label className="row" style={{ fontWeight: 400, gap: 8 }}>
+                <input type="checkbox" name="walkOk" value="1" /> I&apos;m up for making this a walking call
+              </label>
             )}
             <div>
               <label htmlFor="notes">Anything to share before we meet? (optional)</label>

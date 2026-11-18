@@ -26,6 +26,9 @@ export async function POST(req: NextRequest) {
       email: String(body.email ?? ""),
       phone: String(body.phone ?? ""),
       notes: String(body.notes ?? ""),
+      commonAnswer: String(body.commonAnswer ?? ""),
+      meetingGoal: String(body.meetingGoal ?? ""),
+      walkOk: body.walkOk === true,
     });
     return NextResponse.json({ id: b.id, token: b.cancel_token });
   } catch (err) {

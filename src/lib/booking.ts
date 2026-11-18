@@ -7,6 +7,7 @@ import { accessToken, busyTime } from "./accounts";
 import * as google from "./google";
 import { getSettings, locationLabel, rulesFor, type EventType } from "./eventTypes";
 import { blockedRange, isSlotAvailable } from "./slots";
+import { MAX_ANSWER, MAX_GOAL, sameAnswer } from "./personalize";
 
 export class BookingError extends Error {
   constructor(
@@ -22,6 +23,10 @@ export interface GuestInput {
   email: string;
   phone?: string;
   notes?: string;
+  /** Optional personal touches; ignored unless the link has them turned on. */
+  commonAnswer?: string;
+  meetingGoal?: string;
+  walkOk?: boolean;
 }
 
 export interface ExtraEvent {
@@ -32,6 +37,9 @@ export interface ExtraEvent {
 
 export interface BookingRow {
   id: string;
+  common_answer: string;
+  meeting_goal: string;
+  walk_ok: boolean;
   extra_events: ExtraEvent[];
   user_id: number;
   event_type_id: number | null;
@@ -73,7 +81,12 @@ export function validateGuest(t: EventType, g: GuestInput): Required<GuestInput>
     throw new BookingError("Please enter a phone number we can call.");
   }
   if (notes.length > 2000) throw new BookingError("Notes are too long.");
-  return { name, email, phone, notes };
+  const commonAnswer = t.personal_common ? String(g.commonAnswer ?? "").trim() : "";
+  const meetingGoal = t.personal_goal ? String(g.meetingGoal ?? "").trim() : "";
+  const walkOk = t.personal_walk ? g.walkOk === true : false;
+  if (commonAnswer.length > MAX_ANSWER) throw new BookingError("That answer is too long.");
+  if (meetingGoal.length > MAX_GOAL) throw new BookingError("Your goal is too long.");
+  return { name, email, phone, notes, commonAnswer, meetingGoal, walkOk };
 }
 
 /**
@@ -184,6 +197,9 @@ export async function createBooking(t: EventType, startMs: number, input: GuestI
     const description = [
       `Booked by ${guest.name} (${guest.email})`,
       guest.phone ? `Phone: ${guest.phone}` : "",
+      guest.meetingGoal ? `\nWhat would make this time great: ${guest.meetingGoal}` : "",
+      guest.commonAnswer ? `${t.common_prompt}: ${guest.commonAnswer}${sameAnswer(guest.commonAnswer, t.common_host_answer) ? " (same as yours!)" : ""}` : "",
+      guest.walkOk ? "Up for a walking call" : "",
       guest.notes ? `\nNotes from ${guest.name}:\n${guest.notes}` : "",
       t.location_type === "custom" && t.location_detail ? `\n${t.location_detail}` : "",
       `\nNeed to cancel or reschedule? ${manageUrl}`,
@@ -236,11 +252,11 @@ export async function createBooking(t: EventType, startMs: number, input: GuestI
       const [row] = await tx<BookingRow[]>`
         insert into bookings (id, user_id, event_type_id, event_title, start_at, end_at, block_start_at, block_end_at,
           guest_name, guest_email, guest_phone, notes, account_id, calendar_id, google_event_id, meet_link, cancel_token,
-          extra_events)
+          extra_events, common_answer, meeting_goal, walk_ok)
         values (${id}, ${t.user_id}, ${t.id}, ${t.title}, ${new Date(startMs)}, ${new Date(endMs)}, ${new Date(block.start)},
           ${new Date(block.end)}, ${guest.name}, ${guest.email}, ${guest.phone}, ${guest.notes},
           ${target.accountId}, ${target.calendarId}, ${event.id}, ${event.hangoutLink ?? null},
-          ${cancelToken}, ${tx.json(extras as never)})
+          ${cancelToken}, ${tx.json(extras as never)}, ${guest.commonAnswer}, ${guest.meetingGoal}, ${guest.walkOk})
         returning *`;
       return row;
     } catch (err) {

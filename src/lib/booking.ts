@@ -106,7 +106,7 @@ export async function createBooking(t: EventType, startMs: number, input: GuestI
       },
       startMs,
     );
-    if (!ok) throw new BookingError("Sorry, that time was just taken. Please pick another.", 409);
+    if (!ok) throw new BookingError("Busy signal! Someone just grabbed that time. Please pick another.", 409);
 
     const id = randomUUID();
     const cancelToken = randomToken();

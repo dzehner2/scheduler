@@ -112,8 +112,8 @@ const set = (q) => fetch(`${FAKE}/__set?${q}`);
   await guest.fill("#name", "Riley Retailer");
   await guest.fill("#email", "riley@shop.test");
   await guest.fill("#notes", "Interested in stocking your line.");
-  await guest.click("text=Confirm booking");
-  await guest.waitForSelector("text=You are booked.");
+  await guest.click("text=Lock it in");
+  await guest.waitForSelector("text=It's a play date!");
   await guest.screenshot({ path: `${OUT}/shot-confirmed.png` });
   check(true, "guest booking confirmed");
 
@@ -157,7 +157,7 @@ const set = (q) => fetch(`${FAKE}/__set?${q}`);
   // 9. Guest cancels via the manage link
   await guest.click("text=Cancel or reschedule");
   await guest.click("text=Cancel meeting");
-  await guest.waitForSelector("text=This meeting is cancelled.");
+  await guest.waitForSelector("text=This play date is cancelled.");
   const evs2 = await (await fetch(`${FAKE}/__events`)).json();
   check(!(evs2["dan@work.test"] || []).some((e) => e.summary === "Intro call with Riley Retailer"), "cancel deletes the Google event");
   check((await slotsFor()).body.slots.map(local).includes("09:00"), "cancelled time is offered again");

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Logo from "@/components/Logo";
 import NavLinks from "@/components/NavLinks";
 import { db } from "@/lib/db";
 import { requireOwner } from "@/lib/session";
@@ -16,13 +17,14 @@ export default async function DashboardLayout({ children }: { children: React.Re
     <>
       <nav className="nav">
         <div className="container">
-          <strong>PlayDate</strong>
+          <Link href="/dashboard" className="navlogo"><Logo size="sm" /></Link>
           <NavLinks />
           <form action="/api/auth/logout" method="post">
             <button className="linkbtn" title={owner}>Sign out</button>
           </form>
         </div>
       </nav>
+      <div className="workspace">
       <main className="container">
         {broken.length > 0 && (
           <div className="alert error">
@@ -38,6 +40,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
         )}
         {children}
       </main>
+      </div>
     </>
   );
 }

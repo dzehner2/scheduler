@@ -136,6 +136,7 @@ export default function BookingWidget(p: Props) {
           <br />
           {p.location}
         </p>
+        <p className="tagline">Like ringing the landline, minus the busy signal.</p>
         {p.description && <p style={{ whiteSpace: "pre-wrap" }}>{p.description}</p>}
         {slot && step !== "pick" && <p><strong>{fmtFull(slot)}</strong></p>}
       </div>
@@ -144,7 +145,7 @@ export default function BookingWidget(p: Props) {
         {step === "pick" && (
           <>
             <div className="row spread" style={{ marginBottom: 12 }}>
-              <h2 style={{ margin: 0 }}>Pick a time</h2>
+              <h2 style={{ margin: 0 }}>Pick a time to come over</h2>
               <div className="row">
                 <button className="btn secondary small" disabled={!canPrev} onClick={() => weekStart && setWeekStart(weekStart.minus({ days: 7 }))}>
                   Previous
@@ -168,9 +169,9 @@ export default function BookingWidget(p: Props) {
                 );
               })}
             </div>
-            {slots === null && <p className="muted">Checking availability...</p>}
+            {slots === null && <p className="muted">Ringing the calendar...</p>}
             {loadError && <div className="alert error">{loadError}</div>}
-            {slots !== null && !loadError && byDay.size === 0 && <p className="muted">No open times this week. Try the next week.</p>}
+            {slots !== null && !loadError && byDay.size === 0 && <p className="muted">Nobody's home this week. Try the next one.</p>}
             {day && byDay.get(day) && (
               <div className="times">
                 {byDay.get(day)!.map((s) => (
@@ -192,7 +193,7 @@ export default function BookingWidget(p: Props) {
         {step === "form" && slot && (
           <form onSubmit={submit} className="stack">
             <button type="button" className="linkbtn" onClick={() => setStep("pick")}>Back</button>
-            <h2>Your details</h2>
+            <h2>Who&apos;s calling?</h2>
             {formError && <div className="alert error">{formError}</div>}
             <div>
               <label htmlFor="name">Name</label>
@@ -218,20 +219,20 @@ export default function BookingWidget(p: Props) {
               <input id="website" name="website" type="text" tabIndex={-1} autoComplete="off" />
             </div>
             <div>
-              <button className="btn" disabled={submitting}>{submitting ? "Booking..." : "Confirm booking"}</button>
+              <button className="btn" disabled={submitting}>{submitting ? "Dialing..." : "Lock it in"}</button>
             </div>
           </form>
         )}
 
         {step === "done" && slot && result && (
           <div className="stack">
-            <div className="alert ok">You are booked.</div>
+            <div className="alert ok big">It&apos;s a play date!</div>
             <p>
               <strong>{p.title}</strong>
               <br />
               {fmtFull(slot)} ({zone})
             </p>
-            <p className="muted">A calendar invitation is on its way to your email.</p>
+            <p className="muted">See you then. A calendar invitation is on its way to your inbox.</p>
             <p className="small">
               Need to change it? <a href={`/booking/${result.id}?t=${result.token}`}>Cancel or reschedule</a>
             </p>

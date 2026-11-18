@@ -1,6 +1,6 @@
 import { getSettings } from "./eventTypes";
 import { primaryOwnerId } from "./users";
-import { vibeOrDefault, type VibeId } from "./vibes";
+import { fromBuiltIn, resolveVibe, type ResolvedVibe } from "./vibeResolve";
 
 /** Who runs this PlayDate, for the public homepage and legal pages. */
 export async function siteOperator(): Promise<{ name: string; contact: string | null }> {
@@ -15,14 +15,14 @@ export async function siteOperator(): Promise<{ name: string; contact: string | 
 }
 
 /** The site-wide vibe (homepage, sign-up, legal pages): the primary owner's. */
-export async function siteVibe(): Promise<VibeId> {
+export async function siteVibe(): Promise<ResolvedVibe> {
   try {
     const id = await primaryOwnerId();
-    if (id) return vibeOrDefault((await getSettings(id)).vibe);
+    if (id) return await resolveVibe((await getSettings(id)).vibe);
   } catch {
     // Database not reachable (for example during build): use the default look.
   }
-  return "mall";
+  return fromBuiltIn("mall");
 }
 
 export const LEGAL_UPDATED = "November 18, 2026";

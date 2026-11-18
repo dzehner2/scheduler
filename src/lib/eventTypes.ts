@@ -110,6 +110,7 @@ export interface Settings {
   display_name: string;
   vibe: string;
   favorite_show: string;
+  custom_vibe: string;
   time_zone: string;
   booking_account_id: number | null;
   booking_calendar_id: string | null;
@@ -134,6 +135,7 @@ const DEFAULT_SETTINGS: Settings = {
   display_name: "",
   vibe: "mall",
   favorite_show: "",
+  custom_vibe: "",
   time_zone: "America/Los_Angeles",
   booking_account_id: null,
   booking_calendar_id: null,
@@ -143,7 +145,7 @@ const DEFAULT_SETTINGS: Settings = {
 export async function getSettings(userId: number): Promise<Settings> {
   const sql = await db();
   const [s] = await sql<Settings[]>`
-    select display_name, vibe, favorite_show, time_zone, booking_account_id, booking_calendar_id
+    select display_name, vibe, favorite_show, custom_vibe, time_zone, booking_account_id, booking_calendar_id
     from user_settings where user_id = ${userId}`;
   return s ?? DEFAULT_SETTINGS;
 }

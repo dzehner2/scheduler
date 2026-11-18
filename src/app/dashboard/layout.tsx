@@ -4,7 +4,7 @@ import NavLinks from "@/components/NavLinks";
 import { db } from "@/lib/db";
 import { getSettings } from "@/lib/eventTypes";
 import { requireUser } from "@/lib/session";
-import { vibeOrDefault } from "@/lib/vibes";
+import { resolveVibe } from "@/lib/vibeResolve";
 import CheckInCard from "@/components/CheckInCard";
 import { recordUsage } from "@/lib/usage";
 import { todaysCheckIn } from "@/lib/checkins";
@@ -15,7 +15,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const me = await requireUser();
   const mySettings = await getSettings(me.id);
   await recordUsage(me.id, "page");
-  const vibe = vibeOrDefault(mySettings.vibe);
+  const vibe = await resolveVibe(mySettings.vibe);
   const checkIn = mySettings.favorite_show ? await todaysCheckIn(me.id) : null;
   const sql = await db();
   const broken = await sql<{ email: string; last_error: string | null }[]>`
@@ -23,7 +23,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const [{ count }] = await sql<{ count: number }[]>`select count(*)::int as count from calendars c join accounts a on a.id = c.account_id where c.check_conflicts and a.user_id = ${me.id}`;
 
   return (
-    <div className={`vibe-${vibe}`}>
+    <div className={vibe.className} style={vibe.style as React.CSSProperties}>
       <nav className="nav">
         <div className="container">
           <Link href="/dashboard" className="navlogo"><Logo size="sm" /></Link>

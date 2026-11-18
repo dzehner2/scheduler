@@ -10,6 +10,7 @@ const calendars = {
 };
 const events = {}; // calendarId -> [{id,start,end,summary,attendees}]
 let seq = 1;
+const anthropicCalls = [];
 
 function calsFor(email) {
   if (!calendars[email]) {
@@ -50,6 +51,32 @@ http
       return json(res, 200, { ok: true });
     }
     if (p === "/__events") return json(res, 200, events);
+
+    // Fake Anthropic Messages API (for the vibe designer). Returns a design with
+    // deliberate flaws (show name in the copy, an em dash, unreadable ink) so tests
+    // prove the app cleans them up.
+    if (p === "/__anthropic") return json(res, 200, { calls: anthropicCalls });
+    if (p === "/v1/messages" && req.method === "POST") {
+      const body = JSON.parse(await read(req));
+      anthropicCalls.push({ model: body.model, fallbacks: body.fallbacks, user: body.messages?.[0]?.content, hasFormat: !!body.output_config?.format });
+      const design = {
+        name: "Pinwheel Parade",
+        blurb: "Candy stripes, a carnival of color and a bouncy marquee.",
+        tagline: "Step right up \u2014 pick a time!",
+        pick: "Pick a time",
+        done: "Ta-da! You're booked.",
+        font: "luckiest-guy",
+        pattern: "stripes",
+        radius: 12,
+        colors: { pageBg: "#fff0d6", softBg: "#fff8ec", ink: "#cccccc", accent: "#e63946", accent2: "#2a9d8f", accent3: "#f4a261", link: "#e9c46a", led: "#f4a261", ledBg: "#f9f9f9", navBg: "#264653" },
+      };
+      return json(res, 200, {
+        id: "msg_fake", type: "message", role: "assistant", model: body.model,
+        content: [{ type: "text", text: JSON.stringify(design) }],
+        stop_reason: "end_turn", stop_sequence: null,
+        usage: { input_tokens: 900, output_tokens: 300 },
+      });
+    }
 
     if (p === "/auth") {
       const email = url.searchParams.get("login_hint") || nextEmail;

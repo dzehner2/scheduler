@@ -3,7 +3,7 @@ import ManageBooking from "@/components/ManageBooking";
 import { getBooking, tokenMatches } from "@/lib/booking";
 import { linkPathFor } from "@/lib/users";
 import { brandingFor, brandStyle, getEventType, getSettings } from "@/lib/eventTypes";
-import { vibeOrDefault } from "@/lib/vibes";
+import { resolveVibe } from "@/lib/vibeResolve";
 
 export const dynamic = "force-dynamic";
 
@@ -21,9 +21,9 @@ export default async function BookingPage({
   const type = b.event_type_id ? await getEventType(b.event_type_id) : null;
   const brand = type ? brandingFor(type) : null;
   const branded = brand?.theme === "brand";
-  const vibe = vibeOrDefault((await getSettings(b.user_id)).vibe);
+  const vibe = await resolveVibe((await getSettings(b.user_id)).vibe);
   return (
-    <div className={branded ? "theme-brand" : `vibe-page vibe-${vibe}`} style={(brand ? brandStyle(brand) : {}) as React.CSSProperties}>
+    <div className={branded ? "theme-brand" : `vibe-page ${vibe.className}`} style={(branded && brand ? brandStyle(brand) : vibe.style) as React.CSSProperties}>
     <main className="container narrow">
       <ManageBooking
         id={b.id}

@@ -1,7 +1,6 @@
 "use client";
 import { DateTime } from "luxon";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { VIBES, type VibeId } from "@/lib/vibes";
 import { FEELINGS, GUEST_TIPS, type Feeling } from "@/lib/wellbeing";
 import { MAX_ANSWER, MAX_GOAL, sameAnswer } from "@/lib/personalize";
 
@@ -19,7 +18,7 @@ interface Props {
   branded?: boolean;
   brandName?: string;
   logoUrl?: string;
-  vibe?: VibeId;
+  vibeCopy?: { tagline: string; pick: string; done: string };
   /** Show the optional feeling question (on by default). */
   askFeeling?: boolean;
   /** Personal touches turned on by the link owner. */
@@ -53,7 +52,7 @@ const BRAND_COPY = {
 type Step = "pick" | "form" | "done";
 
 export default function BookingWidget(p: Props) {
-  const v = VIBES[p.vibe ?? "mall"];
+  const v = p.vibeCopy ?? { tagline: "", pick: "Pick a time", done: "You are booked." };
   const C = p.branded ? BRAND_COPY : { ...BASE_COPY, pick: v.pick, done: v.done };
   const [zone, setZone] = useState<string>("UTC");
   const [zones, setZones] = useState<string[]>([]);

@@ -625,3 +625,22 @@ th { font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; color: 
 .common-match { margin-top: 6px; font-weight: 800; color: var(--ok); }
 .theme-brand .host-note { border: 1px solid var(--line); box-shadow: none; }
 .theme-brand .common { border-width: 1px; }
+
+/* Data-driven vibes (built-in specs and AI-designed): positions, repeats and caps from tokens */
+body, .vibe-page { background-repeat: var(--page-repeat, repeat); background-position: var(--page-position, 0 0); }
+.vibe-spec h1, .vibe-spec .logo-word { text-transform: var(--display-transform, none); }
+.vibe-spec h1 { font-size: 27px; letter-spacing: 0.03em; }
+.vibe-spec .logo-word { letter-spacing: 0.04em; }
+.vibe-spec .alert.big { font-family: var(--display), Impact, sans-serif; text-transform: var(--display-transform, none); }
+.vibe-spec .tagline { background: var(--yellow); color: var(--ink); }
+
+/* Preview of a vibe on the welcome screen */
+.vibe-preview {
+  border: 3px solid var(--ink); border-radius: var(--radius); padding: 28px; min-height: 180px;
+  background-color: var(--page-bg); background-image: var(--page-pattern); background-size: var(--page-pattern-size);
+  background-repeat: var(--page-repeat, repeat); background-position: var(--page-position, 0 0); background-attachment: scroll;
+}
+.vibe-preview-card { background: #fff; border: 3px solid var(--ink); border-radius: var(--radius); box-shadow: var(--shadow); padding: 16px; max-width: 360px; }
+.vibe-preview-title { font-family: var(--display), Impact, sans-serif; font-size: 26px; color: var(--logo-color); text-transform: var(--display-transform, none); }
+.vibe-preview .time { display: inline-block; cursor: default; }
+.vibe-option.made-for-you { border-color: var(--teal); }

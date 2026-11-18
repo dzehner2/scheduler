@@ -45,6 +45,7 @@ The app has three parts:
    | `OWNER_EMAIL` | the Google address you will sign in with. Several are allowed, separated by commas. |
    | `APP_URL` | your Vercel address, for example `https://playdate-dan.vercel.app` (no trailing slash) |
    | `CONTACT_EMAIL` | the email to show on the privacy policy and terms pages (Google requires a contact) |
+   | `ANTHROPIC_API_KEY` | optional: an Anthropic API key from console.anthropic.com. When someone's favorite show isn't one of the built-in vibes, PlayDate asks Claude to design a new one (about 2 to 5 cents per new show, saved and reused). Without it, people pick the closest built-in vibe instead. |
    | `COFFEE_URL` | optional: your tip page, for example `https://ko-fi.com/yourname`. Shows a Buy me a coffee button on `/signup`. |
 
 4. Open **Deployments**, click the three dots on the latest one, and choose **Redeploy**.

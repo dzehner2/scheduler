@@ -23,7 +23,7 @@ The app has three parts:
    - `.../auth/calendar.readonly`
    - `.../auth/calendar.events`
    - `openid` and `.../auth/userinfo.email`
-6. Under **Audience**, click **Publish app** so the status is **In production**.
+6. Under **Audience**, the app must end up **In production** (you will publish in step 3, once your privacy and terms pages are live).
    - Do not skip this. In "Testing" status, Google expires your sign-in every 7 days and the booking page will pause.
    - Google will not review it for a personal app. When you sign in you will see "Google hasn't verified this app". Click **Advanced**, then **Go to PlayDate (unsafe)**. This is expected for an app only you use.
 7. Open **APIs and Services > Credentials > Create credentials > OAuth client ID**.
@@ -44,18 +44,28 @@ The app has three parts:
    | `APP_SECRET` | a long random string, 32+ characters. A password manager's generator works. Do not change it later, or connected accounts must be reconnected. |
    | `OWNER_EMAIL` | the Google address you will sign in with. Several are allowed, separated by commas. |
    | `APP_URL` | your Vercel address, for example `https://playdate-dan.vercel.app` (no trailing slash) |
+   | `CONTACT_EMAIL` | the email to show on the privacy policy and terms pages (Google requires a contact) |
 
 4. Open **Deployments**, click the three dots on the latest one, and choose **Redeploy**.
 
-## 3. Finish the Google redirect
+## 3. Finish Google setup and publish
 
-Back in Google Cloud **Credentials**, edit the OAuth client and add a second redirect URI:
+Your app now has a public homepage, privacy policy and terms page. Google needs these before you can publish.
 
-```
-https://YOUR-VERCEL-ADDRESS/api/auth/callback
-```
+1. **Branding** page in Google Cloud: fill in
+   - Application home page: `https://YOUR-VERCEL-ADDRESS`
+   - Privacy policy link: `https://YOUR-VERCEL-ADDRESS/privacy`
+   - Terms of service link: `https://YOUR-VERCEL-ADDRESS/terms`
+   - Authorized domains: `YOUR-VERCEL-ADDRESS` (for example `playdate-dan.vercel.app`, no `https://`)
+   - Save.
+2. **Clients** page: edit the OAuth client and add a second redirect URI. It must match `APP_URL` exactly, plus `/api/auth/callback`:
 
-It must match `APP_URL` exactly, plus `/api/auth/callback`.
+   ```
+   https://YOUR-VERCEL-ADDRESS/api/auth/callback
+   ```
+3. **Audience** page: click **Publish app**. If Google offers to start verification, you can skip it; an unverified app works for you, with the warning screen described in step 1.6.
+
+Until the site is live you can leave the app in Testing and add each of your Google accounts under **Audience > Test users**. Sign-ins expire every 7 days in Testing, so publish once the pages are up.
 
 ## 4. First run
 

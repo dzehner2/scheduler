@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import BookingWidget from "@/components/BookingWidget";
+import Footer from "@/components/Footer";
 import { getEventTypeBySlug, getSettings, locationLabel } from "@/lib/eventTypes";
 
 export const dynamic = "force-dynamic";
@@ -17,6 +18,7 @@ export default async function BookPage({ params }: Props) {
   if (!t || !t.active) notFound();
   const s = await getSettings();
   return (
+    <>
     <main className="container">
       <BookingWidget
         slug={t.slug}
@@ -29,5 +31,7 @@ export default async function BookPage({ params }: Props) {
         maxDaysAhead={t.max_days_ahead}
       />
     </main>
+    <Footer />
+    </>
   );
 }

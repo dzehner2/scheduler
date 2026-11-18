@@ -28,7 +28,7 @@ export interface Settings {
   booking_calendar_id: string | null;
 }
 
-export const RESERVED_SLUGS = new Set(["api", "dashboard", "login", "booking", "_next", "favicon.ico"]);
+export const RESERVED_SLUGS = new Set(["api", "dashboard", "login", "booking", "privacy", "terms", "_next", "favicon.ico"]);
 
 export function rulesFor(t: EventType): SlotRules {
   return {

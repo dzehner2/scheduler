@@ -1,0 +1,48 @@
+import Footer from "@/components/Footer";
+import { LEGAL_UPDATED, siteOperator } from "@/lib/site";
+
+export const dynamic = "force-dynamic";
+export const metadata = { title: "Terms of service | PlayDate" };
+
+export default async function Terms() {
+  const { name, contact } = await siteOperator();
+  return (
+    <>
+      <main className="container narrow">
+        <div className="card stack" style={{ marginTop: 32 }}>
+          <h1>Terms of service</h1>
+          <p className="muted small">Last updated {LEGAL_UPDATED}</p>
+          <p>
+            PlayDate is a personal booking page operated by {name}. By booking a time, you agree to these terms.
+          </p>
+          <h2>Using PlayDate</h2>
+          <ul>
+            <li>Book only times you intend to keep, and give accurate contact details.</li>
+            <li>Do not use PlayDate to send spam, make automated bookings, or disrupt the service.</li>
+            <li>{name} may decline, cancel or reschedule any booking.</li>
+          </ul>
+          <h2>Availability</h2>
+          <p>
+            PlayDate is provided as is, without warranties. Times shown depend on Google Calendar and may change.
+            A booking is confirmed only when you see the confirmation and receive the calendar invitation.
+          </p>
+          <h2>Liability</h2>
+          <p>
+            To the extent the law allows, {name} is not liable for missed meetings, scheduling errors, or other
+            losses from using PlayDate.
+          </p>
+          <h2>Privacy</h2>
+          <p>
+            How information is handled is described in the <a href="/privacy">privacy policy</a>.
+          </p>
+          <h2>Changes and contact</h2>
+          <p>
+            These terms may be updated; the date above shows the latest version. Questions:{" "}
+            {contact ? <a href={`mailto:${contact}`}>{contact}</a> : name}.
+          </p>
+        </div>
+      </main>
+      <Footer />
+    </>
+  );
+}

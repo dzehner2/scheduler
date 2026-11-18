@@ -24,8 +24,15 @@ export interface GuestInput {
   notes?: string;
 }
 
+export interface ExtraEvent {
+  account_id: number;
+  calendar_id: string;
+  event_id: string;
+}
+
 export interface BookingRow {
   id: string;
+  extra_events: ExtraEvent[];
   user_id: number;
   event_type_id: number | null;
   event_title: string;
@@ -88,6 +95,42 @@ export async function bookingCalendarFor(t: EventType): Promise<{ accountId: num
     if (mine) return { accountId: s.booking_account_id, calendarId: s.booking_calendar_id };
   }
   return null;
+}
+
+/**
+ * Extra calendars that get a silent copy: only the link owner's own, editable,
+ * connected calendars, never the main one, at most 10.
+ */
+export async function extraCalendarsFor(t: EventType, main: { accountId: number; calendarId: string }) {
+  const refs = Array.isArray(t.extra_calendars) ? t.extra_calendars : [];
+  if (!refs.length) return [];
+  const sql = await db();
+  const rows = await sql<{ account_id: number; google_id: string }[]>`
+    select c.account_id, c.google_id from calendars c join accounts a on a.id = c.account_id
+    where a.user_id = ${t.user_id} and a.status = 'ok' and c.access_role in ('owner', 'writer')`;
+  const ok = new Set(rows.map((r) => `${r.account_id}|${r.google_id}`));
+  const seen = new Set<string>([`${main.accountId}|${main.calendarId}`]);
+  const out: { accountId: number; calendarId: string }[] = [];
+  for (const r of refs) {
+    const key = `${r.account_id}|${r.calendar_id}`;
+    if (ok.has(key) && !seen.has(key)) {
+      seen.add(key);
+      out.push({ accountId: r.account_id, calendarId: r.calendar_id });
+    }
+  }
+  return out.slice(0, 10);
+}
+
+async function removeExtras(extras: ExtraEvent[]) {
+  await Promise.all(
+    extras.map(async (x) => {
+      try {
+        await deps.deleteEvent(await deps.accessToken(x.account_id), x.calendar_id, x.event_id, false);
+      } catch (err) {
+        console.error("Could not remove booking copy", err);
+      }
+    }),
+  );
 }
 
 const LOCK_KEY = 7_220_011; // any constant; serializes bookings so two guests cannot take the same time
@@ -166,19 +209,44 @@ export async function createBooking(t: EventType, startMs: number, input: GuestI
       requestId: id,
     });
 
+    // Silent copies on the other calendars the owner picked. Best effort: a
+    // failed copy never cancels the real booking.
+    const extras: ExtraEvent[] = [];
+    for (const x of await extraCalendarsFor(t, target)) {
+      try {
+        const copy = await deps.insertEvent(await deps.accessToken(x.accountId), x.calendarId, {
+          summary: `${t.title} with ${guest.name}`,
+          description: [event.hangoutLink ? `Google Meet: ${event.hangoutLink}` : "", description].filter(Boolean).join("\n\n"),
+          start: startMs,
+          end: endMs,
+          timeZone: settings.time_zone,
+          attendees: [],
+          location: event.hangoutLink ?? (t.location_type === "phone" ? `Phone: ${guest.phone}` : t.location_type === "in_person" ? t.location_detail : undefined),
+          meet: false,
+          requestId: `${id}-${extras.length + 1}`,
+          notify: false,
+        });
+        extras.push({ account_id: x.accountId, calendar_id: x.calendarId, event_id: copy.id });
+      } catch (err) {
+        console.error("Could not add booking copy", err);
+      }
+    }
+
     try {
       const [row] = await tx<BookingRow[]>`
         insert into bookings (id, user_id, event_type_id, event_title, start_at, end_at, block_start_at, block_end_at,
-          guest_name, guest_email, guest_phone, notes, account_id, calendar_id, google_event_id, meet_link, cancel_token)
+          guest_name, guest_email, guest_phone, notes, account_id, calendar_id, google_event_id, meet_link, cancel_token,
+          extra_events)
         values (${id}, ${t.user_id}, ${t.id}, ${t.title}, ${new Date(startMs)}, ${new Date(endMs)}, ${new Date(block.start)},
           ${new Date(block.end)}, ${guest.name}, ${guest.email}, ${guest.phone}, ${guest.notes},
           ${target.accountId}, ${target.calendarId}, ${event.id}, ${event.hangoutLink ?? null},
-          ${cancelToken})
+          ${cancelToken}, ${tx.json(extras as never)})
         returning *`;
       return row;
     } catch (err) {
       // Do not leave an orphan event on the calendar if we could not record it.
       await deps.deleteEvent(token, target.calendarId, event.id).catch(() => {});
+      await removeExtras(extras);
       throw err;
     }
   });
@@ -198,6 +266,7 @@ export function tokenMatches(b: BookingRow, token: string | undefined | null): b
 /** Cancel a booking: deletes the calendar event (Google emails the guest) and frees the time. */
 export async function cancelBooking(b: BookingRow): Promise<void> {
   if (b.status !== "confirmed") return;
+  await removeExtras(Array.isArray(b.extra_events) ? b.extra_events : []);
   if (b.google_event_id && b.account_id && b.calendar_id) {
     const token = await deps.accessToken(b.account_id);
     await deps.deleteEvent(token, b.calendar_id, b.google_event_id);

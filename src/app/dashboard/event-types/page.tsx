@@ -46,6 +46,11 @@ export default async function EventTypes({ searchParams }: { searchParams: Promi
                 {t.daily_cap ? `, max ${t.daily_cap} per day` : ""}
                 {t.theme === "brand" && t.brand_name ? `, ${t.brand_name} branding` : ""}
               </div>
+              {(t.extra_calendars ?? []).length > 0 && (
+                <div className="muted small">
+                  Copies on {(t.extra_calendars ?? []).map((x) => calName(x.account_id, x.calendar_id)).join(", ")}
+                </div>
+              )}
               {calName(t.booking_account_id, t.booking_calendar_id) && (
                 <div className="muted small">Bookings go on {calName(t.booking_account_id, t.booking_calendar_id)}</div>
               )}

@@ -157,6 +157,8 @@ export interface NewEvent {
   location?: string;
   meet: boolean;
   requestId: string;
+  /** false for silent copies: no emails to attendees. Default true. */
+  notify?: boolean;
 }
 
 export async function insertEvent(
@@ -164,7 +166,7 @@ export async function insertEvent(
   calendarId: string,
   e: NewEvent,
 ): Promise<{ id: string; hangoutLink?: string; htmlLink?: string }> {
-  const p = new URLSearchParams({ sendUpdates: "all", conferenceDataVersion: e.meet ? "1" : "0" });
+  const p = new URLSearchParams({ sendUpdates: e.notify === false ? "none" : "all", conferenceDataVersion: e.meet ? "1" : "0" });
   return call(`${CAL}/calendars/${encodeURIComponent(calendarId)}/events?${p}`, {
     method: "POST",
     token,
@@ -185,10 +187,10 @@ export async function insertEvent(
   });
 }
 
-export async function deleteEvent(token: string, calendarId: string, eventId: string): Promise<void> {
+export async function deleteEvent(token: string, calendarId: string, eventId: string, notify = true): Promise<void> {
   try {
     await call(
-      `${CAL}/calendars/${encodeURIComponent(calendarId)}/events/${encodeURIComponent(eventId)}?sendUpdates=all`,
+      `${CAL}/calendars/${encodeURIComponent(calendarId)}/events/${encodeURIComponent(eventId)}?sendUpdates=${notify ? "all" : "none"}`,
       { method: "DELETE", token },
     );
   } catch (err) {

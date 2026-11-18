@@ -30,6 +30,13 @@ export interface EventType {
   /** null = use the default booking calendar from settings */
   booking_account_id: number | null;
   booking_calendar_id: string | null;
+  /** Calendars that also get a copy of each booking (no invite sent). */
+  extra_calendars: CalendarRef[];
+}
+
+export interface CalendarRef {
+  account_id: number;
+  calendar_id: string;
 }
 
 export type Theme = "playdate" | "brand";

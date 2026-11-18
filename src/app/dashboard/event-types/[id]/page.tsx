@@ -32,6 +32,7 @@ const DEFAULTS: Omit<EventType, "id" | "user_id"> = {
   brand_logo_url: "",
   booking_account_id: null,
   booking_calendar_id: null,
+  extra_calendars: [],
 };
 
 export default async function EditEventType({
@@ -111,6 +112,23 @@ export default async function EditEventType({
             <div className="hint">
               The guest&apos;s invite comes from this calendar&apos;s Google account. It is always checked for conflicts.
             </div>
+            <fieldset className="extras">
+              <legend>Also add bookings to</legend>
+              <div className="hint" style={{ marginTop: 0, marginBottom: 6 }}>
+                Each booking also shows up on these calendars as a copy. Your guest only gets one invite, from the
+                calendar above.
+              </div>
+              {writable.map((c) => {
+                const key = `${c.account_id}|${c.google_id}`;
+                const on = (t.extra_calendars ?? []).some((x) => `${x.account_id}|${x.calendar_id}` === key);
+                return (
+                  <label key={key} className="row" style={{ fontWeight: 400, margin: "4px 0", gap: 8 }}>
+                    <input type="checkbox" name="extra_calendar" value={key} defaultChecked={on} />
+                    {c.summary} ({c.email})
+                  </label>
+                );
+              })}
+            </fieldset>
             {currentMissing && (
               <div className="alert error small" style={{ marginTop: 8 }}>
                 The calendar this link used is no longer connected, so bookings are going on the default. Pick one and save.

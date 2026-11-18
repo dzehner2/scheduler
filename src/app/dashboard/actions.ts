@@ -138,6 +138,20 @@ export async function saveEventType(form: FormData) {
       booking_account_id = Number(acct);
       booking_calendar_id = rest.join("|");
     }
+    // Extra calendars for silent copies: must be this user's own editable calendars.
+    const extraKeys = [...new Set(form.getAll("extra_calendar").map(String))].slice(0, 10);
+    const extra_calendars: { account_id: number; calendar_id: string }[] = [];
+    for (const key of extraKeys) {
+      const [acct, ...rest] = key.split("|");
+      const calId = rest.join("|");
+      const [ok] = await sql`
+        select 1 from calendars c join accounts a on a.id = c.account_id
+        where c.account_id = ${Number(acct)} and c.google_id = ${calId} and a.user_id = ${me.id}
+          and c.access_role in ('owner', 'writer')`;
+      if (!ok) throw new Error("Pick extra calendars you can edit.");
+      if (Number(acct) === booking_account_id && calId === booking_calendar_id) continue;
+      extra_calendars.push({ account_id: Number(acct), calendar_id: calId });
+    }
     const brand = {
       theme,
       brand_name: String(form.get("brand_name") ?? "").trim().slice(0, 120),
@@ -165,6 +179,7 @@ export async function saveEventType(form: FormData) {
       ...brand,
       booking_account_id,
       booking_calendar_id,
+      extra_calendars: sql.json(extra_calendars as never),
     };
     if (!Number.isFinite(values.min_notice_min) || values.min_notice_min < 0 || values.min_notice_min > 60 * 24 * 30) {
       throw new Error("Minimum notice must be between 0 and 720 hours.");

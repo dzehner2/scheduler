@@ -76,6 +76,8 @@ alter table event_types add column if not exists brand_primary text not null def
 alter table event_types add column if not exists brand_dark text not null default '';
 alter table event_types add column if not exists brand_bg text not null default '';
 alter table event_types add column if not exists brand_logo_url text not null default '';
+alter table event_types add column if not exists booking_account_id int references accounts(id) on delete set null;
+alter table event_types add column if not exists booking_calendar_id text;
 
 create table if not exists waitlist (
   id serial primary key,

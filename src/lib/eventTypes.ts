@@ -25,6 +25,9 @@ export interface EventType {
   brand_dark: string;
   brand_bg: string;
   brand_logo_url: string;
+  /** null = use the default booking calendar from settings */
+  booking_account_id: number | null;
+  booking_calendar_id: string | null;
 }
 
 export type Theme = "playdate" | "brand";

@@ -67,6 +67,7 @@ const set = (q) => fetch(`${FAKE}/__set?${q}`);
   await owner.selectOption("#theme", "brand");
   await owner.click("button:has-text('CedarStone')");
   check((await owner.inputValue("#brand_primary")) === "#117A4F", "CedarStone preset fills brand colors");
+  await owner.selectOption("#booking_calendar", { label: "Family (dan@personal.test)" });
   await owner.click("button:has-text('Save')");
   await owner.waitForURL(/event-types\?saved=1/);
   const cs = await browser.newPage({ viewport: { width: 1100, height: 760 } });
@@ -195,6 +196,31 @@ const set = (q) => fetch(`${FAKE}/__set?${q}`);
   await owner.goto(`${APP}/dashboard`);
   await owner.screenshot({ path: `${OUT}/shot-dashboard.png`, fullPage: true });
   check((await owner.textContent("body")).includes("Riley Retailer"), "dashboard lists bookings");
+
+  // 10b. Per-link booking calendar: CedarStone bookings go on the second account
+  const tue = mon.plus({ days: 1 });
+  const tueSlots = async (type) => {
+    const r = await fetch(`${APP}/api/slots?type=${type}&start=${encodeURIComponent(tue.toUTC().toISO())}&end=${encodeURIComponent(tue.plus({ days: 1 }).toUTC().toISO())}`);
+    return (await r.json()).slots;
+  };
+  const csSlot = (await tueSlots("cedarstone"))[0];
+  const csBook = await fetch(`${APP}/api/book`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ type: "cedarstone", start: csSlot, name: "Casey Client", email: "casey@co.test" }),
+  });
+  check(csBook.status === 200, "CedarStone link booking accepted");
+  const evs3 = await (await fetch(`${FAKE}/__events`)).json();
+  check((evs3["family-dan@personal.test"] || []).some((e) => e.summary === "Site walk with Casey Client"), "CedarStone booking lands on the link's own calendar");
+  check(!(evs3["dan@work.test"] || []).some((e) => e.summary === "Site walk with Casey Client"), "and not on the default booking calendar");
+  check(!(await tueSlots("intro")).includes(csSlot), "a CedarStone booking blocks that time on other links");
+  await owner.goto(`${APP}/dashboard/event-types`);
+  check((await owner.textContent("body")).includes("Bookings go on Family (dan@personal.test)"), "link list shows each link's booking calendar");
+  await owner.goto(`${APP}/dashboard/calendars`);
+  owner.once("dialog", (d) => d.accept());
+  await owner.locator(".card", { hasText: "dan@personal.test" }).first().locator("button:has-text('Disconnect')").click();
+  await owner.waitForURL(/error=/);
+  check((await owner.textContent("body")).includes("Site walk"), "cannot disconnect an account a link books onto");
 
   // 11. Waitlist sign-up
   const visitor = await browser.newPage();

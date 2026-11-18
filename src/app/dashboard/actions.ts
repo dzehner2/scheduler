@@ -66,6 +66,11 @@ export async function disconnectAccount(form: FormData) {
   if (s.booking_account_id === id) {
     redirect("/dashboard/calendars?error=That+account+holds+your+booking+calendar.+Pick+a+different+booking+calendar+first.");
   }
+  const links = await sql<{ title: string }[]>`select title from event_types where booking_account_id = ${id}`;
+  if (links.length) {
+    const names = links.map((l) => l.title).join(", ");
+    redirect(`/dashboard/calendars?error=${encodeURIComponent(`That account holds the booking calendar for: ${names}. Change those links first.`)}`);
+  }
   await sql`delete from accounts where id = ${id}`;
   revalidatePath("/dashboard", "layout");
 }
@@ -110,6 +115,17 @@ export async function saveEventType(form: FormData) {
     if (logo && (!/^https:\/\/\S+$/.test(logo) || logo.length > 500)) {
       throw new Error("The logo address must start with https://");
     }
+    const target = String(form.get("booking_calendar") ?? "");
+    let booking_account_id: number | null = null;
+    let booking_calendar_id: string | null = null;
+    if (target) {
+      const [acct, ...rest] = target.split("|");
+      const [cal] = await sql<{ access_role: string }[]>`
+        select access_role from calendars where account_id = ${Number(acct)} and google_id = ${rest.join("|")}`;
+      if (!cal || !["owner", "writer"].includes(cal.access_role)) throw new Error("Pick a booking calendar you can edit.");
+      booking_account_id = Number(acct);
+      booking_calendar_id = rest.join("|");
+    }
     const brand = {
       theme,
       brand_name: String(form.get("brand_name") ?? "").trim().slice(0, 120),
@@ -135,6 +151,8 @@ export async function saveEventType(form: FormData) {
       location_detail: String(form.get("location_detail") ?? "").trim().slice(0, 500),
       active: form.get("active") === "on",
       ...brand,
+      booking_account_id,
+      booking_calendar_id,
     };
     if (!Number.isFinite(values.min_notice_min) || values.min_notice_min < 0 || values.min_notice_min > 60 * 24 * 30) {
       throw new Error("Minimum notice must be between 0 and 720 hours.");

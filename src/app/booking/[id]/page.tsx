@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import ManageBooking from "@/components/ManageBooking";
 import { getBooking, tokenMatches } from "@/lib/booking";
-import { getEventType } from "@/lib/eventTypes";
+import { brandingFor, brandStyle, getEventType } from "@/lib/eventTypes";
 
 export const dynamic = "force-dynamic";
 
@@ -17,7 +17,10 @@ export default async function BookingPage({
   const b = await getBooking(id);
   if (!b || !tokenMatches(b, t)) notFound();
   const type = b.event_type_id ? await getEventType(b.event_type_id) : null;
+  const brand = type ? brandingFor(type) : null;
+  const branded = brand?.theme === "brand";
   return (
+    <div className={branded ? "theme-brand" : undefined} style={(brand ? brandStyle(brand) : {}) as React.CSSProperties}>
     <main className="container narrow">
       <ManageBooking
         id={b.id}
@@ -27,7 +30,9 @@ export default async function BookingPage({
         cancelled={b.status !== "confirmed"}
         past={b.start_at < new Date()}
         rebookSlug={type?.active ? type.slug : null}
+        branded={branded}
       />
     </main>
+    </div>
   );
 }

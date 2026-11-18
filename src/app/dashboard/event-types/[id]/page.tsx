@@ -1,6 +1,8 @@
 import { notFound } from "next/navigation";
+import BrandFields from "@/components/BrandFields";
 import ConfirmButton from "@/components/ConfirmButton";
-import { getEventType, type EventType } from "@/lib/eventTypes";
+import { db } from "@/lib/db";
+import { getEventType, getSettings, type EventType } from "@/lib/eventTypes";
 import { deleteEventType, saveEventType } from "../../actions";
 
 const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
@@ -20,6 +22,14 @@ const DEFAULTS: Omit<EventType, "id"> = {
   location_type: "meet",
   location_detail: "",
   active: true,
+  theme: "playdate",
+  brand_name: "",
+  brand_primary: "",
+  brand_dark: "",
+  brand_bg: "",
+  brand_logo_url: "",
+  booking_account_id: null,
+  booking_calendar_id: null,
 };
 
 export default async function EditEventType({
@@ -34,6 +44,14 @@ export default async function EditEventType({
   const existing = id === "new" ? null : await getEventType(Number(id));
   if (id !== "new" && !existing) notFound();
   const t = existing ?? { ...DEFAULTS, id: 0 };
+  const sql = await db();
+  const settings = await getSettings();
+  const writable = await sql<{ account_id: number; google_id: string; summary: string; email: string }[]>`
+    select c.account_id, c.google_id, c.summary, a.email from calendars c join accounts a on a.id = c.account_id
+    where c.access_role in ('owner', 'writer') order by a.created_at, (c.google_id = a.email) desc, c.summary`;
+  const def = writable.find((c) => c.account_id === settings.booking_account_id && c.google_id === settings.booking_calendar_id);
+  const current = t.booking_account_id && t.booking_calendar_id ? `${t.booking_account_id}|${t.booking_calendar_id}` : "";
+  const currentMissing = current && !writable.some((c) => `${c.account_id}|${c.google_id}` === current);
 
   return (
     <>
@@ -76,6 +94,25 @@ export default async function EditEventType({
             <label htmlFor="location_detail">Address or details</label>
             <input id="location_detail" name="location_detail" type="text" defaultValue={t.location_detail} />
             <div className="hint">Used for In person and Other.</div>
+          </div>
+          <div>
+            <label htmlFor="booking_calendar">Put bookings on</label>
+            <select id="booking_calendar" name="booking_calendar" defaultValue={currentMissing ? "" : current}>
+              <option value="">Default: {def ? `${def.summary} (${def.email})` : "set in Calendars and settings"}</option>
+              {writable.map((c) => (
+                <option key={`${c.account_id}|${c.google_id}`} value={`${c.account_id}|${c.google_id}`}>
+                  {c.summary} ({c.email})
+                </option>
+              ))}
+            </select>
+            <div className="hint">
+              The guest&apos;s invite comes from this calendar&apos;s Google account. It is always checked for conflicts.
+            </div>
+            {currentMissing && (
+              <div className="alert error small" style={{ marginTop: 8 }}>
+                The calendar this link used is no longer connected, so bookings are going on the default. Pick one and save.
+              </div>
+            )}
           </div>
           <label className="row" style={{ fontWeight: 400 }}>
             <input type="checkbox" name="active" defaultChecked={t.active} /> Link is on (guests can book)
@@ -132,6 +169,17 @@ export default async function EditEventType({
             </div>
           </div>
         </div>
+
+        <BrandFields
+          initial={{
+            theme: t.theme,
+            name: t.brand_name,
+            primary: t.brand_primary,
+            dark: t.brand_dark,
+            bg: t.brand_bg,
+            logoUrl: t.brand_logo_url,
+          }}
+        />
 
         <div className="row spread">
           <button className="btn">Save</button>

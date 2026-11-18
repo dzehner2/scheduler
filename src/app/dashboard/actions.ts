@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { syncCalendars } from "@/lib/accounts";
 import { cancelBooking, getBooking } from "@/lib/booking";
 import { db } from "@/lib/db";
-import { RESERVED_SLUGS } from "@/lib/eventTypes";
+import { isHex, RESERVED_SLUGS } from "@/lib/eventTypes";
 import { requireOwner } from "@/lib/session";
 import { parseHHMM, type WeeklyHours } from "@/lib/slots";
 
@@ -66,6 +66,11 @@ export async function disconnectAccount(form: FormData) {
   if (s.booking_account_id === id) {
     redirect("/dashboard/calendars?error=That+account+holds+your+booking+calendar.+Pick+a+different+booking+calendar+first.");
   }
+  const links = await sql<{ title: string }[]>`select title from event_types where booking_account_id = ${id}`;
+  if (links.length) {
+    const names = links.map((l) => l.title).join(", ");
+    redirect(`/dashboard/calendars?error=${encodeURIComponent(`That account holds the booking calendar for: ${names}. Change those links first.`)}`);
+  }
   await sql`delete from accounts where id = ${id}`;
   revalidatePath("/dashboard", "layout");
 }
@@ -100,6 +105,35 @@ export async function saveEventType(form: FormData) {
     const location_type = String(form.get("location_type"));
     if (!["meet", "phone", "in_person", "custom"].includes(location_type)) throw new Error("Choose a location.");
     const capRaw = String(form.get("daily_cap") ?? "").trim();
+    const theme = form.get("theme") === "brand" ? "brand" : "playdate";
+    const color = (key: string, label: string) => {
+      const v = String(form.get(key) ?? "").trim();
+      if (theme === "brand" && !isHex(v)) throw new Error(`${label} must be a color like #117A4F.`);
+      return isHex(v) ? v.toUpperCase() : "";
+    };
+    const logo = String(form.get("brand_logo_url") ?? "").trim();
+    if (logo && (!/^https:\/\/\S+$/.test(logo) || logo.length > 500)) {
+      throw new Error("The logo address must start with https://");
+    }
+    const target = String(form.get("booking_calendar") ?? "");
+    let booking_account_id: number | null = null;
+    let booking_calendar_id: string | null = null;
+    if (target) {
+      const [acct, ...rest] = target.split("|");
+      const [cal] = await sql<{ access_role: string }[]>`
+        select access_role from calendars where account_id = ${Number(acct)} and google_id = ${rest.join("|")}`;
+      if (!cal || !["owner", "writer"].includes(cal.access_role)) throw new Error("Pick a booking calendar you can edit.");
+      booking_account_id = Number(acct);
+      booking_calendar_id = rest.join("|");
+    }
+    const brand = {
+      theme,
+      brand_name: String(form.get("brand_name") ?? "").trim().slice(0, 120),
+      brand_primary: color("brand_primary", "Main color"),
+      brand_dark: color("brand_dark", "Text color"),
+      brand_bg: color("brand_bg", "Background color"),
+      brand_logo_url: logo,
+    };
 
     values = {
       title,
@@ -116,6 +150,9 @@ export async function saveEventType(form: FormData) {
       location_type,
       location_detail: String(form.get("location_detail") ?? "").trim().slice(0, 500),
       active: form.get("active") === "on",
+      ...brand,
+      booking_account_id,
+      booking_calendar_id,
     };
     if (!Number.isFinite(values.min_notice_min) || values.min_notice_min < 0 || values.min_notice_min > 60 * 24 * 30) {
       throw new Error("Minimum notice must be between 0 and 720 hours.");
@@ -160,4 +197,13 @@ export async function cancelBookingAction(form: FormData) {
     }
   }
   revalidatePath("/dashboard");
+}
+
+// ---------- Waitlist ----------
+
+export async function removeWaitlistEntry(form: FormData) {
+  await requireOwner();
+  const sql = await db();
+  await sql`delete from waitlist where id = ${Number(form.get("id"))}`;
+  revalidatePath("/dashboard/waitlist");
 }

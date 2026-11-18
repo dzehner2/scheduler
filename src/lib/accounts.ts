@@ -111,7 +111,7 @@ export async function syncCalendars(accountId: number): Promise<void> {
 
 /**
  * Busy time from every calendar marked "check for conflicts", on every
- * connected account, plus the booking calendar and confirmed bookings stored
+ * connected account, plus every booking calendar (default and per link) and confirmed bookings stored
  * here. Fails closed: if any calendar cannot be read, this throws.
  */
 export async function busyTime(start: number, end: number): Promise<Interval[]> {
@@ -120,7 +120,11 @@ export async function busyTime(start: number, end: number): Promise<Interval[]> 
     select c.account_id, c.google_id from calendars c where c.check_conflicts
     union
     select s.booking_account_id, s.booking_calendar_id from settings s
-      where s.booking_account_id is not null and s.booking_calendar_id is not null`;
+      where s.booking_account_id is not null and s.booking_calendar_id is not null
+    union
+    select e.booking_account_id, e.booking_calendar_id from event_types e
+      join calendars c on c.account_id = e.booking_account_id and c.google_id = e.booking_calendar_id
+      where e.active`;
   if (rows.length === 0) throw new CalendarUnavailableError("No calendars are connected yet.");
 
   const broken = await sql<{ email: string }[]>`

@@ -19,6 +19,70 @@ export interface EventType {
   location_type: LocationType;
   location_detail: string;
   active: boolean;
+  theme: Theme;
+  brand_name: string;
+  brand_primary: string;
+  brand_dark: string;
+  brand_bg: string;
+  brand_logo_url: string;
+  /** null = use the default booking calendar from settings */
+  booking_account_id: number | null;
+  booking_calendar_id: string | null;
+}
+
+export type Theme = "playdate" | "brand";
+
+export interface Branding {
+  theme: Theme;
+  name: string;
+  primary: string;
+  dark: string;
+  bg: string;
+  logoUrl: string;
+}
+
+export const BRAND_PRESETS: Record<string, Omit<Branding, "theme" | "logoUrl">> = {
+  CedarStone: { name: "CedarStone Design & Build", primary: "#117A4F", dark: "#1F2D3D", bg: "#F2F6F2" },
+};
+
+const HEX = /^#[0-9a-fA-F]{6}$/;
+export const isHex = (v: string) => HEX.test(v);
+
+function luminance(hex: string): number {
+  const [r, g, b] = [1, 3, 5].map((i) => {
+    const c = parseInt(hex.slice(i, i + 2), 16) / 255;
+    return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+  });
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+/** White or near-black, whichever reads better on the given background color. */
+export function readableOn(hex: string): string {
+  if (!isHex(hex)) return "#ffffff";
+  const l = luminance(hex);
+  return (1.05 / (l + 0.05)) >= ((l + 0.05) / 0.0625) ? "#ffffff" : "#111111";
+}
+
+export function brandingFor(t: EventType): Branding {
+  return {
+    theme: t.theme === "brand" ? "brand" : "playdate",
+    name: t.brand_name,
+    primary: isHex(t.brand_primary) ? t.brand_primary : "#1F6FEB",
+    dark: isHex(t.brand_dark) ? t.brand_dark : "#1C2430",
+    bg: isHex(t.brand_bg) ? t.brand_bg : "#F6F7F9",
+    logoUrl: /^https:\/\//.test(t.brand_logo_url) ? t.brand_logo_url : "",
+  };
+}
+
+/** CSS custom properties for a branded page. Empty for the PlayDate look. */
+export function brandStyle(b: Branding): Record<string, string> {
+  if (b.theme !== "brand") return {};
+  return {
+    "--brand-primary": b.primary,
+    "--brand-on-primary": readableOn(b.primary),
+    "--brand-dark": b.dark,
+    "--brand-bg": b.bg,
+  };
 }
 
 export interface Settings {
@@ -28,7 +92,7 @@ export interface Settings {
   booking_calendar_id: string | null;
 }
 
-export const RESERVED_SLUGS = new Set(["api", "dashboard", "login", "booking", "privacy", "terms", "_next", "favicon.ico"]);
+export const RESERVED_SLUGS = new Set(["api", "dashboard", "login", "booking", "privacy", "terms", "signup", "_next", "favicon.ico"]);
 
 export function rulesFor(t: EventType): SlotRules {
   return {

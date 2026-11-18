@@ -59,6 +59,33 @@ const set = (q) => fetch(`${FAKE}/__set?${q}`);
   await owner.waitForURL(/event-types\?saved=1/);
   check((await owner.textContent("body")).includes("/intro"), "booking link created");
 
+  // 3b. A second link with CedarStone branding
+  await owner.goto(`${APP}/dashboard/event-types/new`);
+  await owner.fill("#title", "Site walk");
+  await owner.fill("#slug", "cedarstone");
+  await owner.fill("#description", "Walk the site and talk through options.");
+  await owner.selectOption("#theme", "brand");
+  await owner.click("button:has-text('CedarStone')");
+  check((await owner.inputValue("#brand_primary")) === "#117A4F", "CedarStone preset fills brand colors");
+  await owner.selectOption("#booking_calendar", { label: "Family (dan@personal.test)" });
+  await owner.click("button:has-text('Save')");
+  await owner.waitForURL(/event-types\?saved=1/);
+  const cs = await browser.newPage({ viewport: { width: 1100, height: 760 } });
+  await cs.goto(`${APP}/cedarstone`);
+  await cs.waitForSelector(".day");
+  const csText = await cs.textContent("body");
+  check(csText.includes("CedarStone Design & Build"), "branded page shows company name");
+  check(!/landline|busy signal|rewind|PlayDate/i.test(csText), "branded page has no PlayDate 80s wording");
+  check(!csText.includes("\u2014"), "branded page has no em dashes");
+  const bg = await cs.evaluate(() => getComputedStyle(document.querySelector(".theme-brand")).backgroundColor);
+  check(bg === "rgb(242, 246, 242)", `branded page background is CedarStone light (${bg})`);
+  check(/CedarStone/.test(await cs.title()), "branded page title includes company");
+  await cs.waitForSelector(".time", { timeout: 15000 }).catch(() => {});
+  await cs.screenshot({ path: `${OUT}/shot-cedarstone.png` });
+  const pd = await browser.newPage();
+  await pd.goto(`${APP}/intro`);
+  check((await pd.textContent("body")).includes("landline"), "other links keep the PlayDate look");
+
   // 4. Seed conflicts on two different accounts, a week out (Monday)
   let mon = DateTime.now().setZone(TZ).startOf("day").plus({ days: 3 });
   while (mon.weekday !== 1) mon = mon.plus({ days: 1 });
@@ -112,8 +139,8 @@ const set = (q) => fetch(`${FAKE}/__set?${q}`);
   await guest.fill("#name", "Riley Retailer");
   await guest.fill("#email", "riley@shop.test");
   await guest.fill("#notes", "Interested in stocking your line.");
-  await guest.click("text=Confirm booking");
-  await guest.waitForSelector("text=You are booked.");
+  await guest.click("text=Lock it in");
+  await guest.waitForSelector("text=It's a play date!");
   await guest.screenshot({ path: `${OUT}/shot-confirmed.png` });
   check(true, "guest booking confirmed");
 
@@ -157,7 +184,7 @@ const set = (q) => fetch(`${FAKE}/__set?${q}`);
   // 9. Guest cancels via the manage link
   await guest.click("text=Cancel or reschedule");
   await guest.click("text=Cancel meeting");
-  await guest.waitForSelector("text=This meeting is cancelled.");
+  await guest.waitForSelector("text=This play date is cancelled.");
   const evs2 = await (await fetch(`${FAKE}/__events`)).json();
   check(!(evs2["dan@work.test"] || []).some((e) => e.summary === "Intro call with Riley Retailer"), "cancel deletes the Google event");
   check((await slotsFor()).body.slots.map(local).includes("09:00"), "cancelled time is offered again");
@@ -169,6 +196,52 @@ const set = (q) => fetch(`${FAKE}/__set?${q}`);
   await owner.goto(`${APP}/dashboard`);
   await owner.screenshot({ path: `${OUT}/shot-dashboard.png`, fullPage: true });
   check((await owner.textContent("body")).includes("Riley Retailer"), "dashboard lists bookings");
+
+  // 10b. Per-link booking calendar: CedarStone bookings go on the second account
+  const tue = mon.plus({ days: 1 });
+  const tueSlots = async (type) => {
+    const r = await fetch(`${APP}/api/slots?type=${type}&start=${encodeURIComponent(tue.toUTC().toISO())}&end=${encodeURIComponent(tue.plus({ days: 1 }).toUTC().toISO())}`);
+    return (await r.json()).slots;
+  };
+  const csSlot = (await tueSlots("cedarstone"))[0];
+  const csBook = await fetch(`${APP}/api/book`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ type: "cedarstone", start: csSlot, name: "Casey Client", email: "casey@co.test" }),
+  });
+  check(csBook.status === 200, "CedarStone link booking accepted");
+  const evs3 = await (await fetch(`${FAKE}/__events`)).json();
+  check((evs3["family-dan@personal.test"] || []).some((e) => e.summary === "Site walk with Casey Client"), "CedarStone booking lands on the link's own calendar");
+  check(!(evs3["dan@work.test"] || []).some((e) => e.summary === "Site walk with Casey Client"), "and not on the default booking calendar");
+  check(!(await tueSlots("intro")).includes(csSlot), "a CedarStone booking blocks that time on other links");
+  await owner.goto(`${APP}/dashboard/event-types`);
+  check((await owner.textContent("body")).includes("Bookings go on Family (dan@personal.test)"), "link list shows each link's booking calendar");
+  await owner.goto(`${APP}/dashboard/calendars`);
+  owner.once("dialog", (d) => d.accept());
+  await owner.locator(".card", { hasText: "dan@personal.test" }).first().locator("button:has-text('Disconnect')").click();
+  await owner.waitForURL(/error=/);
+  check((await owner.textContent("body")).includes("Site walk"), "cannot disconnect an account a link books onto");
+
+  // 11. Waitlist sign-up
+  const visitor = await browser.newPage();
+  await visitor.goto(`${APP}/signup`);
+  await visitor.fill("#wl-name", "Pat Painter");
+  await visitor.fill("#wl-email", "pat@paint.test");
+  await visitor.fill("#wl-use", "=HYPERLINK(1) club nights");
+  await visitor.click("text=Put me on the list");
+  await visitor.waitForSelector("text=on the list!");
+  const again = await fetch(`${APP}/api/waitlist`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: "Pat", email: "PAT@paint.test" }) });
+  check(again.status === 200, "signing up twice is accepted quietly");
+  const coffeeShown = (await visitor.locator("text=Buy me a coffee").count()) > 0;
+  check(coffeeShown === !!process.env.COFFEE_URL, `coffee button ${coffeeShown ? "shown" : "hidden"} to match COFFEE_URL`);
+  await visitor.screenshot({ path: `${OUT}/shot-signup.png`, fullPage: true });
+  await owner.goto(`${APP}/dashboard/waitlist`);
+  const wl = await owner.textContent("body");
+  check(wl.includes("pat@paint.test") && wl.includes("1 person"), "waitlist shows one entry in the dashboard");
+  const csv = await owner.evaluate(() => fetch("/api/waitlist/export").then((r) => r.text()));
+  check(csv.includes("'=HYPERLINK"), "CSV export neutralizes spreadsheet formulas");
+  const anonCsv = await fetch(`${APP}/api/waitlist/export`);
+  check(anonCsv.status === 404, "CSV export requires sign-in");
 
   // Phone width check
   const phone = await browser.newPage({ viewport: { width: 390, height: 844 } });

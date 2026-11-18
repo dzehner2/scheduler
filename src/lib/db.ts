@@ -70,6 +70,23 @@ create table if not exists event_types (
   created_at timestamptz not null default now()
 );
 
+alter table event_types add column if not exists theme text not null default 'playdate';
+alter table event_types add column if not exists brand_name text not null default '';
+alter table event_types add column if not exists brand_primary text not null default '';
+alter table event_types add column if not exists brand_dark text not null default '';
+alter table event_types add column if not exists brand_bg text not null default '';
+alter table event_types add column if not exists brand_logo_url text not null default '';
+alter table event_types add column if not exists booking_account_id int references accounts(id) on delete set null;
+alter table event_types add column if not exists booking_calendar_id text;
+
+create table if not exists waitlist (
+  id serial primary key,
+  name text not null,
+  email text not null unique,
+  use_case text not null default '',
+  created_at timestamptz not null default now()
+);
+
 create table if not exists bookings (
   id uuid primary key,
   event_type_id int references event_types(id) on delete set null,

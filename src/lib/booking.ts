@@ -68,15 +68,32 @@ export function validateGuest(t: EventType, g: GuestInput): Required<GuestInput>
   return { name, email, phone, notes };
 }
 
+/**
+ * Calendar a link's bookings go on: the link's own choice if it is still
+ * connected and editable, otherwise the default from settings.
+ */
+export async function bookingCalendarFor(t: EventType): Promise<{ accountId: number; calendarId: string } | null> {
+  const sql = await db();
+  if (t.booking_account_id && t.booking_calendar_id) {
+    const [ok] = await sql`
+      select 1 from calendars c join accounts a on a.id = c.account_id
+      where c.account_id = ${t.booking_account_id} and c.google_id = ${t.booking_calendar_id}
+        and c.access_role in ('owner', 'writer')`;
+    if (ok) return { accountId: t.booking_account_id, calendarId: t.booking_calendar_id };
+  }
+  const s = await getSettings();
+  if (s.booking_account_id && s.booking_calendar_id) return { accountId: s.booking_account_id, calendarId: s.booking_calendar_id };
+  return null;
+}
+
 const LOCK_KEY = 7_220_011; // any constant; serializes bookings so two guests cannot take the same time
 
 export async function createBooking(t: EventType, startMs: number, input: GuestInput): Promise<BookingRow> {
   if (!t.active) throw new BookingError("This booking link is turned off.", 404);
   const guest = validateGuest(t, input);
   const settings = await getSettings();
-  if (!settings.booking_account_id || !settings.booking_calendar_id) {
-    throw new BookingError("Booking is not set up yet.", 503);
-  }
+  const target = await bookingCalendarFor(t);
+  if (!target) throw new BookingError("Booking is not set up yet.", 503);
   const rules = rulesFor(t);
   const endMs = startMs + t.duration_min * 60_000;
   const block = blockedRange(rules, startMs);
@@ -106,7 +123,12 @@ export async function createBooking(t: EventType, startMs: number, input: GuestI
       },
       startMs,
     );
-    if (!ok) throw new BookingError("Sorry, that time was just taken. Please pick another.", 409);
+    if (!ok) throw new BookingError(
+        t.theme === "brand"
+          ? "Sorry, that time was just taken. Please pick another."
+          : "Busy signal! Someone just grabbed that time. Please pick another.",
+        409,
+      );
 
     const id = randomUUID();
     const cancelToken = randomToken();
@@ -121,8 +143,8 @@ export async function createBooking(t: EventType, startMs: number, input: GuestI
       .filter(Boolean)
       .join("\n");
 
-    const token = await deps.accessToken(settings.booking_account_id!);
-    const event = await deps.insertEvent(token, settings.booking_calendar_id!, {
+    const token = await deps.accessToken(target.accountId);
+    const event = await deps.insertEvent(token, target.calendarId, {
       summary: `${t.title} with ${guest.name}`,
       description,
       start: startMs,
@@ -145,13 +167,13 @@ export async function createBooking(t: EventType, startMs: number, input: GuestI
           guest_name, guest_email, guest_phone, notes, account_id, calendar_id, google_event_id, meet_link, cancel_token)
         values (${id}, ${t.id}, ${t.title}, ${new Date(startMs)}, ${new Date(endMs)}, ${new Date(block.start)},
           ${new Date(block.end)}, ${guest.name}, ${guest.email}, ${guest.phone}, ${guest.notes},
-          ${settings.booking_account_id}, ${settings.booking_calendar_id}, ${event.id}, ${event.hangoutLink ?? null},
+          ${target.accountId}, ${target.calendarId}, ${event.id}, ${event.hangoutLink ?? null},
           ${cancelToken})
         returning *`;
       return row;
     } catch (err) {
       // Do not leave an orphan event on the calendar if we could not record it.
-      await deps.deleteEvent(token, settings.booking_calendar_id!, event.id).catch(() => {});
+      await deps.deleteEvent(token, target.calendarId, event.id).catch(() => {});
       throw err;
     }
   });

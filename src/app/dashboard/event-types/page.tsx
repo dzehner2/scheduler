@@ -1,11 +1,20 @@
 import Link from "next/link";
 import CopyLink from "@/components/CopyLink";
 import { config } from "@/lib/config";
+import { db } from "@/lib/db";
 import { listEventTypes, locationLabel } from "@/lib/eventTypes";
 
 export default async function EventTypes({ searchParams }: { searchParams: Promise<{ saved?: string }> }) {
   const { saved } = await searchParams;
   const types = await listEventTypes();
+  const sql = await db();
+  const cals = await sql<{ account_id: number; google_id: string; summary: string; email: string }[]>`
+    select c.account_id, c.google_id, c.summary, a.email from calendars c join accounts a on a.id = c.account_id`;
+  const calName = (accountId: number | null, calendarId: string | null) => {
+    if (!accountId || !calendarId) return null;
+    const c = cals.find((x) => x.account_id === accountId && x.google_id === calendarId);
+    return c ? `${c.summary} (${c.email})` : "a calendar that is no longer connected";
+  };
   return (
     <>
       <div className="row spread" style={{ marginBottom: 16 }}>
@@ -30,7 +39,11 @@ export default async function EventTypes({ searchParams }: { searchParams: Promi
               <div className="muted small">
                 {t.duration_min} min, {locationLabel(t)}
                 {t.daily_cap ? `, max ${t.daily_cap} per day` : ""}
+                {t.theme === "brand" && t.brand_name ? `, ${t.brand_name} branding` : ""}
               </div>
+              {calName(t.booking_account_id, t.booking_calendar_id) && (
+                <div className="muted small">Bookings go on {calName(t.booking_account_id, t.booking_calendar_id)}</div>
+              )}
               <a className="small" href={`/${t.slug}`} target="_blank">
                 {url}
               </a>

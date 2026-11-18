@@ -1,0 +1,80 @@
+import Footer from "@/components/Footer";
+import { LEGAL_UPDATED, siteOperator } from "@/lib/site";
+
+export const dynamic = "force-dynamic";
+export const metadata = { title: "Privacy policy | PlayDate" };
+
+export default async function Privacy() {
+  const { name, contact } = await siteOperator();
+  return (
+    <>
+      <main className="container narrow">
+        <div className="card stack" style={{ marginTop: 32 }}>
+          <h1>Privacy policy</h1>
+          <p className="muted small">Last updated {LEGAL_UPDATED}</p>
+          <p>
+            PlayDate is a personal scheduling tool operated by {name}. This policy explains what information it
+            uses and why.
+          </p>
+
+          <h2>Information from Google accounts</h2>
+          <p>Only the owner of this PlayDate connects Google accounts. For each connected account, PlayDate:</p>
+          <ul>
+            <li>reads the account&apos;s email address, to know which account is connected;</li>
+            <li>reads the list of calendars, so the owner can choose which ones count as busy;</li>
+            <li>reads free and busy times on the chosen calendars. It does not read event titles, descriptions or attendees;</li>
+            <li>creates, and on cancellation deletes, booking events on the one calendar the owner picks for bookings.</li>
+          </ul>
+          <p>
+            Google access tokens are stored encrypted. PlayDate does not sell this information, share it with
+            anyone, use it for advertising, or use it to train AI models. It is used only to show available times
+            and record bookings.
+          </p>
+          <p>
+            PlayDate&apos;s use of information received from Google APIs adheres to the{" "}
+            <a href="https://developers.google.com/terms/api-services-user-data-policy" target="_blank" rel="noreferrer">
+              Google API Services User Data Policy
+            </a>
+            , including the Limited Use requirements.
+          </p>
+
+          <h2>Information from people who book</h2>
+          <p>
+            When you book a time, you give your name, email address, and, if you choose or the meeting requires it,
+            a phone number and notes. This is stored so the meeting can be scheduled, shown to {name}, and included
+            in the calendar invitation Google sends you. It is not sold, shared with third parties, or used for
+            marketing lists.
+          </p>
+
+          <h2>Service providers</h2>
+          <p>
+            PlayDate runs on Vercel (hosting) and a Postgres database provider, and uses Google Calendar to check
+            availability and send invitations. These providers process data only to run the service.
+          </p>
+
+          <h2>Keeping and deleting information</h2>
+          <p>
+            Booking records are kept so the owner can see past and upcoming meetings. You can cancel a booking any
+            time with the link in your invitation. To ask for your booking information to be deleted, contact{" "}
+            {contact ? <a href={`mailto:${contact}`}>{contact}</a> : name}.
+          </p>
+          <p>
+            The owner can disconnect a Google account in PlayDate at any time, which deletes its stored tokens and
+            calendar list. Access can also be revoked from{" "}
+            <a href="https://myaccount.google.com/permissions" target="_blank" rel="noreferrer">
+              your Google account permissions
+            </a>
+            .
+          </p>
+
+          <h2>Cookies</h2>
+          <p>PlayDate uses one cookie to keep the owner signed in. It does not use tracking or advertising cookies.</p>
+
+          <h2>Contact</h2>
+          <p>Questions about this policy: {contact ? <a href={`mailto:${contact}`}>{contact}</a> : name}.</p>
+        </div>
+      </main>
+      <Footer />
+    </>
+  );
+}

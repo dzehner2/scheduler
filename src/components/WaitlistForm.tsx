@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 
-export default function WaitlistForm() {
+export default function WaitlistForm({ coffeeUrl }: { coffeeUrl: string | null }) {
   const [state, setState] = useState<"idle" | "sending" | "done">("idle");
   const [error, setError] = useState<string | null>(null);
 
@@ -29,7 +29,22 @@ export default function WaitlistForm() {
   }
 
   if (state === "done") {
-    return <div className="alert ok big">You&apos;re on the list!</div>;
+    return (
+      <div className="stack">
+        <div className="alert ok big">You&apos;re on the list!</div>
+        {coffeeUrl && (
+          <div className="card stack coffee" style={{ marginBottom: 0 }}>
+            <h2>Thanks for waiting by the phone</h2>
+            <p>PlayDate is free. If you want to help it open up sooner, you can buy the maker a coffee.</p>
+            <div>
+              <a className="btn coffee-btn" href={coffeeUrl} target="_blank" rel="noopener noreferrer">
+                Buy me a coffee
+              </a>
+            </div>
+          </div>
+        )}
+      </div>
+    );
   }
 
   return (

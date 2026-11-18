@@ -225,6 +225,7 @@ const set = (q) => fetch(`${FAKE}/__set?${q}`);
   // 11. Waitlist sign-up
   const visitor = await browser.newPage();
   await visitor.goto(`${APP}/signup`);
+  check((await visitor.locator("text=Buy me a coffee").count()) === 0, "coffee button hidden before joining the waitlist");
   await visitor.fill("#wl-name", "Pat Painter");
   await visitor.fill("#wl-email", "pat@paint.test");
   await visitor.fill("#wl-use", "=HYPERLINK(1) club nights");
@@ -233,7 +234,7 @@ const set = (q) => fetch(`${FAKE}/__set?${q}`);
   const again = await fetch(`${APP}/api/waitlist`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: "Pat", email: "PAT@paint.test" }) });
   check(again.status === 200, "signing up twice is accepted quietly");
   const coffeeShown = (await visitor.locator("text=Buy me a coffee").count()) > 0;
-  check(coffeeShown === !!process.env.COFFEE_URL, `coffee button ${coffeeShown ? "shown" : "hidden"} to match COFFEE_URL`);
+  check(coffeeShown === !!process.env.COFFEE_URL, `coffee button ${coffeeShown ? "shown" : "hidden"} after joining (COFFEE_URL ${process.env.COFFEE_URL ? "set" : "unset"})`);
   await visitor.screenshot({ path: `${OUT}/shot-signup.png`, fullPage: true });
   await owner.goto(`${APP}/dashboard/waitlist`);
   const wl = await owner.textContent("body");

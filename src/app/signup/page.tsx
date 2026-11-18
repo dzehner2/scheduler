@@ -8,7 +8,7 @@ export const metadata: Metadata = { title: "Get your own PlayDate" };
 
 export default function Signup() {
   const coffee = process.env.COFFEE_URL;
-  const coffeeOk = coffee && /^https:\/\/\S+$/.test(coffee);
+  const coffeeOk = !!coffee && /^https:\/\/\S+$/.test(coffee);
   return (
     <>
       <main className="container narrow">
@@ -23,18 +23,9 @@ export default function Signup() {
             It&apos;s a one-person project for now. Leave your name and email and you&apos;ll hear when spots open
             up. No spam, and your email is never shared.
           </p>
-          <WaitlistForm />
+          <WaitlistForm coffeeUrl={coffeeOk ? coffee : null} />
         </div>
 
-        {coffeeOk && (
-          <div className="card stack coffee">
-            <h2>Like what you see?</h2>
-            <p>PlayDate is free. If it saved you a phone tag or two, you can buy the maker a coffee.</p>
-            <a className="btn coffee-btn" href={coffee} target="_blank" rel="noopener noreferrer">
-              Buy me a coffee
-            </a>
-          </div>
-        )}
       </main>
       <Footer />
     </>

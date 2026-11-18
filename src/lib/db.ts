@@ -147,6 +147,17 @@ create table if not exists user_settings (
 alter table settings add column if not exists signup_limit int not null default 5;
 alter table user_settings add column if not exists vibe text not null default 'mall';
 alter table user_settings add column if not exists favorite_show text not null default '';
+-- The user's own AI-designed vibe ("custom:<id>"), kept even if they switch to another
+alter table user_settings add column if not exists custom_vibe text not null default '';
+
+-- AI-designed vibes, one per show, shared by everyone who names that show
+create table if not exists vibe_designs (
+  id serial primary key,
+  show_key text not null unique,
+  spec jsonb not null,
+  created_by int references users(id) on delete set null,
+  created_at timestamptz not null default now()
+);
 
 -- Daily usage counts per user, for the footprint estimate (counts only, no visitor details)
 create table if not exists usage_daily (

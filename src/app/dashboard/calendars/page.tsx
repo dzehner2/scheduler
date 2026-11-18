@@ -3,7 +3,7 @@ import { config } from "@/lib/config";
 import { getSettings } from "@/lib/eventTypes";
 import { requireUser } from "@/lib/session";
 import { isPrimaryOwner } from "@/lib/users";
-import { vibeOrDefault } from "@/lib/vibes";
+import { resolveVibe } from "@/lib/vibeResolve";
 import VibePicker from "@/components/VibePicker";
 import ConfirmButton from "@/components/ConfirmButton";
 import { deleteMyAccount, disconnectAccount, refreshCalendars, saveHandle, saveSettings, toggleCalendar } from "../actions";
@@ -154,7 +154,7 @@ export default async function Calendars({
           )}
           {" "}Applies to your PlayDate-style links and this dashboard. Company-branded links keep their branding.
         </p>
-        <VibePicker current={vibeOrDefault(settings.vibe)} />
+        <VibePicker current={(await resolveVibe(settings.vibe)).key} custom={settings.custom_vibe ? await resolveVibe(settings.custom_vibe) : null} />
       </div>
 
       <form className="card stack" action={saveSettings}>

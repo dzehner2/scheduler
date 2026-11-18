@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import BookingWidget from "@/components/BookingWidget";
 import Footer from "@/components/Footer";
-import { vibeOrDefault } from "@/lib/vibes";
+import { resolveVibe } from "@/lib/vibeResolve";
 import { recordUsage } from "@/lib/usage";
 import { brandingFor, brandStyle, getEventTypeBySlug, getSettings, locationLabel } from "@/lib/eventTypes";
 
@@ -20,10 +20,11 @@ export default async function BookPage({ handle, slug }: { handle: string | null
   await recordUsage(t.user_id, "page");
   const b = brandingFor(t);
   const branded = b.theme === "brand";
+  const vibe = await resolveVibe(s.vibe);
   return (
     <div
-      className={branded ? "theme-brand" : `vibe-page vibe-${vibeOrDefault(s.vibe)}`}
-      style={brandStyle(b) as React.CSSProperties}
+      className={branded ? "theme-brand" : `vibe-page ${vibe.className}`}
+      style={(branded ? brandStyle(b) : vibe.style) as React.CSSProperties}
     >
       <main className="container">
         <BookingWidget
@@ -39,7 +40,7 @@ export default async function BookPage({ handle, slug }: { handle: string | null
           branded={branded}
           brandName={b.name}
           logoUrl={b.logoUrl}
-          vibe={vibeOrDefault(s.vibe)}
+          vibeCopy={branded ? undefined : { tagline: vibe.tagline, pick: vibe.pick, done: vibe.done }}
           askFeeling={t.personal_mood === true}
           personal={{
             note: t.personal_note,

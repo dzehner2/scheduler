@@ -8,7 +8,9 @@ import { db } from "@/lib/db";
 import { isHex, RESERVED_SLUGS } from "@/lib/eventTypes";
 import { endSession, requireAdmin, requireUser } from "@/lib/session";
 import { validHandle } from "@/lib/users";
-import { isVibe, matchVibe } from "@/lib/vibes";
+import { customId, isVibe, matchVibe } from "@/lib/vibes";
+import { designVibe } from "@/lib/vibeDesigner";
+import { loadDesign } from "@/lib/vibeResolve";
 import { todayFor } from "@/lib/checkins";
 import { isScale } from "@/lib/wellbeing";
 import { MAX_ANSWER, MAX_NOTE } from "@/lib/personalize";
@@ -296,20 +298,41 @@ export async function saveFavoriteShow(form: FormData) {
   const me = await requireUser();
   const show = String(form.get("favorite_show") ?? "").trim().slice(0, 120);
   if (!show) redirect("/dashboard/welcome?error=" + encodeURIComponent("Tell us a show, any show."));
+  // A built-in vibe if one fits; otherwise design a new one for this show.
   const matched = matchVibe(show);
+  let vibe: string = matched ?? "mall";
+  let outcome = matched ? "match" : "nomatch";
+  if (!matched) {
+    const designId = await designVibe(show, me.id);
+    if (designId) {
+      vibe = `custom:${designId}`;
+      outcome = "designed";
+    }
+  }
   const sql = await db();
   await sql`
-    insert into user_settings (user_id, favorite_show, vibe) values (${me.id}, ${show}, ${matched ?? "mall"})
-    on conflict (user_id) do update set favorite_show = excluded.favorite_show, vibe = excluded.vibe`;
+    insert into user_settings (user_id, favorite_show, vibe, custom_vibe)
+    values (${me.id}, ${show}, ${vibe}, ${outcome === "designed" ? vibe : ""})
+    on conflict (user_id) do update set favorite_show = excluded.favorite_show, vibe = excluded.vibe,
+      custom_vibe = case when excluded.custom_vibe <> '' then excluded.custom_vibe else user_settings.custom_vibe end`;
   revalidatePath("/", "layout");
-  redirect(`/dashboard/welcome?step=vibe${matched ? "" : "&nomatch=1"}`);
+  redirect(`/dashboard/welcome?step=vibe&outcome=${outcome}`);
 }
 
 export async function saveVibe(form: FormData) {
   const me = await requireUser();
   const vibe = String(form.get("vibe") ?? "");
-  if (!isVibe(vibe)) redirect("/dashboard/calendars?error=" + encodeURIComponent("Pick one of the vibes."));
+  const cid = customId(vibe);
   const sql = await db();
+  if (cid) {
+    // Only the user's own designed vibe can be picked this way.
+    const [s] = await sql<{ custom_vibe: string }[]>`select custom_vibe from user_settings where user_id = ${me.id}`;
+    if (s?.custom_vibe !== vibe || !(await loadDesign(cid))) {
+      redirect("/dashboard/calendars?error=" + encodeURIComponent("Pick one of the vibes."));
+    }
+  } else if (!isVibe(vibe)) {
+    redirect("/dashboard/calendars?error=" + encodeURIComponent("Pick one of the vibes."));
+  }
   await sql`
     insert into user_settings (user_id, vibe) values (${me.id}, ${vibe})
     on conflict (user_id) do update set vibe = excluded.vibe`;

@@ -91,7 +91,9 @@ export default async function Privacy() {
           <h2>Service providers</h2>
           <p>
             PlayDate runs on Vercel (hosting) and a Postgres database provider, and uses Google Calendar to check
-            availability and send invitations. These providers process data only to run the service.
+            availability and send invitations. If an account holder&apos;s favorite show isn&apos;t in PlayDate&apos;s
+            collection of page styles, just the show&apos;s name is sent to Anthropic&apos;s Claude to design a new
+            style; nothing else about the person is sent. These providers process data only to run the service.
           </p>
 
           <h2>Keeping and deleting information</h2>

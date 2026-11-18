@@ -5,6 +5,8 @@ import { db } from "@/lib/db";
 import { getSettings } from "@/lib/eventTypes";
 import { requireUser } from "@/lib/session";
 import { vibeOrDefault } from "@/lib/vibes";
+import CheckInCard from "@/components/CheckInCard";
+import { todaysCheckIn } from "@/lib/checkins";
 
 export const dynamic = "force-dynamic";
 
@@ -12,6 +14,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const me = await requireUser();
   const mySettings = await getSettings(me.id);
   const vibe = vibeOrDefault(mySettings.vibe);
+  const checkIn = mySettings.favorite_show ? await todaysCheckIn(me.id) : null;
   const sql = await db();
   const broken = await sql<{ email: string; last_error: string | null }[]>`
     select email, last_error from accounts where status <> 'ok' and user_id = ${me.id} order by email`;
@@ -48,6 +51,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
             <Link href="/dashboard/welcome">Answer it and get your page vibe</Link>
           </div>
         )}
+        {mySettings.favorite_show && !checkIn && <CheckInCard />}
         {children}
       </main>
       </div>

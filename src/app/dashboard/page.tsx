@@ -4,13 +4,17 @@ import type { BookingRow } from "@/lib/booking";
 import { db } from "@/lib/db";
 import { getSettings } from "@/lib/eventTypes";
 import { requireUser } from "@/lib/session";
-import { cancelBookingAction } from "./actions";
+import { cancelBookingAction, redoCheckIn } from "./actions";
+import { todaysCheckIn } from "@/lib/checkins";
+import { hostTip, type CheckIn } from "@/lib/wellbeing";
 
 export default async function Bookings({ searchParams }: { searchParams: Promise<{ error?: string; past?: string }> }) {
   const { error, past } = await searchParams;
   const sql = await db();
   const me = await requireUser();
   const { time_zone } = await getSettings(me.id);
+  const checkIn = await todaysCheckIn(me.id);
+  const tip = checkIn && !checkIn.skipped ? hostTip(checkIn as CheckIn) : null;
   const showPast = past === "1";
   const rows = showPast
     ? await sql<BookingRow[]>`select * from bookings where user_id = ${me.id} and start_at < now() order by start_at desc limit 100`
@@ -31,6 +35,20 @@ export default async function Bookings({ searchParams }: { searchParams: Promise
         <a href={showPast ? "/dashboard" : "/dashboard?past=1"}>{showPast ? "Show upcoming" : "Show past"}</a>
       </div>
       {error && <div className="alert error">{error}</div>}
+      {tip && !showPast && (
+        <div className="card stack selftip">
+          <div className="row spread">
+            <h2 style={{ margin: 0 }}>Today&apos;s tip for you</h2>
+            <form action={redoCheckIn}>
+              <button className="linkbtn small">Redo check-in</button>
+            </form>
+          </div>
+          <p style={{ margin: 0 }}>{tip.text}</p>
+          <p className="small muted" style={{ margin: 0 }}>
+            Based on your private check-in. Source: {tip.source}
+          </p>
+        </div>
+      )}
       <div className="card" style={{ padding: 0, overflowX: "auto" }}>
         {rows.length === 0 ? (
           <p className="muted" style={{ padding: 20, margin: 0 }}>

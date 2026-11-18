@@ -9,6 +9,8 @@ import { isHex, RESERVED_SLUGS } from "@/lib/eventTypes";
 import { endSession, requireAdmin, requireUser } from "@/lib/session";
 import { validHandle } from "@/lib/users";
 import { isVibe, matchVibe } from "@/lib/vibes";
+import { todayFor } from "@/lib/checkins";
+import { isScale } from "@/lib/wellbeing";
 import { parseHHMM, type WeeklyHours } from "@/lib/slots";
 
 const int = (v: FormDataEntryValue | null, min: number, max: number, label: string): number => {
@@ -294,4 +296,37 @@ export async function saveVibe(form: FormData) {
     on conflict (user_id) do update set vibe = excluded.vibe`;
   revalidatePath("/", "layout");
   redirect(String(form.get("next") ?? "") === "welcome" ? "/dashboard/calendars?welcome=1" : "/dashboard/calendars?saved=1");
+}
+
+// ---------- Daily check-in (private to each user) ----------
+
+export async function saveCheckIn(form: FormData) {
+  const me = await requireUser();
+  const day = await todayFor(me.id);
+  const sql = await db();
+  const back = String(form.get("back") ?? "/dashboard");
+  const safeBack = back.startsWith("/dashboard") ? back : "/dashboard";
+  if (form.get("skip") === "1") {
+    await sql`
+      insert into user_checkins (user_id, day, skipped) values (${me.id}, ${day}, true)
+      on conflict (user_id, day) do update set skipped = true, energy = null, stress = null, mood = null`;
+  } else {
+    const [energy, stress, mood] = ["energy", "stress", "mood"].map((k) => Number(form.get(k)));
+    if (![energy, stress, mood].every(isScale)) redirect(`${safeBack}?error=${encodeURIComponent("Pick an answer for all three questions.")}`);
+    await sql`
+      insert into user_checkins (user_id, day, energy, stress, mood) values (${me.id}, ${day}, ${energy}, ${stress}, ${mood})
+      on conflict (user_id, day) do update set energy = excluded.energy, stress = excluded.stress, mood = excluded.mood, skipped = false`;
+  }
+  // Keep only the last 30 days.
+  await sql`delete from user_checkins where user_id = ${me.id} and day < ${day}::date - 30`;
+  revalidatePath("/dashboard", "layout");
+  redirect(safeBack === "/dashboard" ? "/dashboard?checkin=1" : safeBack);
+}
+
+export async function redoCheckIn() {
+  const me = await requireUser();
+  const sql = await db();
+  await sql`delete from user_checkins where user_id = ${me.id} and day = ${await todayFor(me.id)}`;
+  revalidatePath("/dashboard", "layout");
+  redirect("/dashboard");
 }

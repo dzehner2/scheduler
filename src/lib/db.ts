@@ -129,6 +129,18 @@ alter table settings add column if not exists signup_limit int not null default 
 alter table user_settings add column if not exists vibe text not null default 'mall';
 alter table user_settings add column if not exists favorite_show text not null default '';
 
+-- Private daily check-in for each user (kept 30 days)
+create table if not exists user_checkins (
+  user_id int not null references users(id) on delete cascade,
+  day date not null,
+  energy int,
+  stress int,
+  mood int,
+  skipped boolean not null default false,
+  created_at timestamptz not null default now(),
+  primary key (user_id, day)
+);
+
 alter table accounts add column if not exists user_id int references users(id) on delete cascade;
 alter table accounts drop constraint if exists accounts_email_key;
 create unique index if not exists accounts_user_email on accounts (user_id, email);

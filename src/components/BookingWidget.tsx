@@ -2,6 +2,7 @@
 import { DateTime } from "luxon";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { VIBES, type VibeId } from "@/lib/vibes";
+import { FEELINGS, GUEST_TIPS, type Feeling } from "@/lib/wellbeing";
 
 interface Props {
   /** null for the primary owner's root links */
@@ -56,6 +57,9 @@ export default function BookingWidget(p: Props) {
   const [formError, setFormError] = useState<string | null>(null);
   const [result, setResult] = useState<{ id: string; token: string } | null>(null);
   const [autoAdvance, setAutoAdvance] = useState(6);
+  // Stays in this browser only: never stored or sent to the server.
+  const [feeling, setFeeling] = useState<Feeling | null>(null);
+  const tip = feeling ? GUEST_TIPS[feeling] : null;
 
   // Detect the guest's time zone on the client only.
   useEffect(() => {
@@ -174,6 +178,30 @@ export default function BookingWidget(p: Props) {
         {!p.branded && <p className="tagline">{v.tagline}</p>}
         {p.description && <p style={{ whiteSpace: "pre-wrap" }}>{p.description}</p>}
         {slot && step !== "pick" && <p><strong>{fmtFull(slot)}</strong></p>}
+        <div className="feel">
+          <div className="feel-q" id="feel-q">How are you feeling today?</div>
+          <div className="feel-options" role="radiogroup" aria-labelledby="feel-q">
+            {FEELINGS.map((f) => (
+              <button
+                key={f.id}
+                type="button"
+                role="radio"
+                aria-checked={feeling === f.id}
+                className={`feel-chip${feeling === f.id ? " on" : ""}`}
+                onClick={() => setFeeling(feeling === f.id ? null : f.id)}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
+          {tip && (
+            <div className="feel-tip" aria-live="polite">
+              <p>{tip.text}</p>
+              <p className="feel-source">{tip.source}</p>
+            </div>
+          )}
+          <p className="feel-note">Just for you. Your answer stays on this screen and is never saved or shared.</p>
+        </div>
       </div>
 
       <div className="pick">

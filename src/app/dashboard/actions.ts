@@ -176,6 +176,7 @@ export async function saveEventType(form: FormData) {
       location_type,
       location_detail: String(form.get("location_detail") ?? "").trim().slice(0, 500),
       active: form.get("active") === "on",
+      ask_feeling: form.get("ask_feeling") === "on",
       ...brand,
       booking_account_id,
       booking_calendar_id,

@@ -77,6 +77,14 @@ alter table event_types add column if not exists brand_dark text not null defaul
 alter table event_types add column if not exists brand_bg text not null default '';
 alter table event_types add column if not exists brand_logo_url text not null default '';
 
+create table if not exists waitlist (
+  id serial primary key,
+  name text not null,
+  email text not null unique,
+  use_case text not null default '',
+  created_at timestamptz not null default now()
+);
+
 create table if not exists bookings (
   id uuid primary key,
   event_type_id int references event_types(id) on delete set null,

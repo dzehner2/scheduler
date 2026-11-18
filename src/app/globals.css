@@ -283,3 +283,8 @@ th { font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; color: 
   border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px;
 }
 .theme-brand .btn.small { box-shadow: none; }
+
+/* Sign-up page coffee card */
+.coffee { background: var(--yellow); }
+.coffee-btn { background: var(--ink); color: #fff; }
+.coffee-btn:hover { color: var(--yellow); }

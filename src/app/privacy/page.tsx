@@ -46,6 +46,13 @@ export default async function Privacy() {
             marketing lists.
           </p>
 
+          <h2>Waitlist</h2>
+          <p>
+            If you join the waitlist, PlayDate stores your name, email and, if you give it, what you would use
+            PlayDate for. It is used only to tell you when PlayDate opens up. It is not sold or shared, and you can
+            ask to be removed at any time.
+          </p>
+
           <h2>Service providers</h2>
           <p>
             PlayDate runs on Vercel (hosting) and a Postgres database provider, and uses Google Calendar to check

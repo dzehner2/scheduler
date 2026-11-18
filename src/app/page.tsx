@@ -26,7 +26,7 @@ export default async function Home() {
           </p>
           <p className="muted">Got a link from someone? Use that link to pick a time. This page doesn&apos;t list them.</p>
           <p className="small">
-            <Link href="/privacy">Privacy policy</Link> · <Link href="/terms">Terms of service</Link> ·{" "}
+            <Link href="/privacy">Privacy policy</Link> · <Link href="/terms">Terms of service</Link> · <Link href="/signup">Get your own PlayDate</Link> ·{" "}
             <Link href="/login">Owner sign in</Link>
           </p>
         </div>

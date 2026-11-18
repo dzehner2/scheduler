@@ -180,3 +180,12 @@ export async function cancelBookingAction(form: FormData) {
   }
   revalidatePath("/dashboard");
 }
+
+// ---------- Waitlist ----------
+
+export async function removeWaitlistEntry(form: FormData) {
+  await requireOwner();
+  const sql = await db();
+  await sql`delete from waitlist where id = ${Number(form.get("id"))}`;
+  revalidatePath("/dashboard/waitlist");
+}

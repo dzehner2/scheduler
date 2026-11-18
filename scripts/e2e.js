@@ -196,6 +196,27 @@ const set = (q) => fetch(`${FAKE}/__set?${q}`);
   await owner.screenshot({ path: `${OUT}/shot-dashboard.png`, fullPage: true });
   check((await owner.textContent("body")).includes("Riley Retailer"), "dashboard lists bookings");
 
+  // 11. Waitlist sign-up
+  const visitor = await browser.newPage();
+  await visitor.goto(`${APP}/signup`);
+  await visitor.fill("#wl-name", "Pat Painter");
+  await visitor.fill("#wl-email", "pat@paint.test");
+  await visitor.fill("#wl-use", "=HYPERLINK(1) club nights");
+  await visitor.click("text=Put me on the list");
+  await visitor.waitForSelector("text=on the list!");
+  const again = await fetch(`${APP}/api/waitlist`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: "Pat", email: "PAT@paint.test" }) });
+  check(again.status === 200, "signing up twice is accepted quietly");
+  const coffeeShown = (await visitor.locator("text=Buy me a coffee").count()) > 0;
+  check(coffeeShown === !!process.env.COFFEE_URL, `coffee button ${coffeeShown ? "shown" : "hidden"} to match COFFEE_URL`);
+  await visitor.screenshot({ path: `${OUT}/shot-signup.png`, fullPage: true });
+  await owner.goto(`${APP}/dashboard/waitlist`);
+  const wl = await owner.textContent("body");
+  check(wl.includes("pat@paint.test") && wl.includes("1 person"), "waitlist shows one entry in the dashboard");
+  const csv = await owner.evaluate(() => fetch("/api/waitlist/export").then((r) => r.text()));
+  check(csv.includes("'=HYPERLINK"), "CSV export neutralizes spreadsheet formulas");
+  const anonCsv = await fetch(`${APP}/api/waitlist/export`);
+  check(anonCsv.status === 404, "CSV export requires sign-in");
+
   // Phone width check
   const phone = await browser.newPage({ viewport: { width: 390, height: 844 } });
   await phone.goto(`${APP}/intro`);

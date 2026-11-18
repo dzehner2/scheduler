@@ -89,6 +89,8 @@ export function brandStyle(b: Branding): Record<string, string> {
 
 export interface Settings {
   display_name: string;
+  vibe: string;
+  favorite_show: string;
   time_zone: string;
   booking_account_id: number | null;
   booking_calendar_id: string | null;
@@ -111,6 +113,8 @@ export function rulesFor(t: EventType): SlotRules {
 
 const DEFAULT_SETTINGS: Settings = {
   display_name: "",
+  vibe: "mall",
+  favorite_show: "",
   time_zone: "America/Los_Angeles",
   booking_account_id: null,
   booking_calendar_id: null,
@@ -120,7 +124,8 @@ const DEFAULT_SETTINGS: Settings = {
 export async function getSettings(userId: number): Promise<Settings> {
   const sql = await db();
   const [s] = await sql<Settings[]>`
-    select display_name, time_zone, booking_account_id, booking_calendar_id from user_settings where user_id = ${userId}`;
+    select display_name, vibe, favorite_show, time_zone, booking_account_id, booking_calendar_id
+    from user_settings where user_id = ${userId}`;
   return s ?? DEFAULT_SETTINGS;
 }
 

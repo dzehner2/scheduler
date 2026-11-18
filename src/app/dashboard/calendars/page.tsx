@@ -3,6 +3,8 @@ import { config } from "@/lib/config";
 import { getSettings } from "@/lib/eventTypes";
 import { requireUser } from "@/lib/session";
 import { isPrimaryOwner } from "@/lib/users";
+import { vibeOrDefault } from "@/lib/vibes";
+import VibePicker from "@/components/VibePicker";
 import ConfirmButton from "@/components/ConfirmButton";
 import { deleteMyAccount, disconnectAccount, refreshCalendars, saveHandle, saveSettings, toggleCalendar } from "../actions";
 
@@ -139,6 +141,21 @@ export default async function Calendars({
           </div>
         </form>
       )}
+
+      <div className="card stack">
+        <h2>Your vibe</h2>
+        <p className="muted small">
+          {settings.favorite_show ? (
+            <>
+              Favorite show: {settings.favorite_show}. <a href="/dashboard/welcome">Change</a>
+            </>
+          ) : (
+            <a href="/dashboard/welcome">Tell us your favorite &apos;80s or &apos;90s show</a>
+          )}
+          {" "}Applies to your PlayDate-style links and this dashboard. Company-branded links keep their branding.
+        </p>
+        <VibePicker current={vibeOrDefault(settings.vibe)} />
+      </div>
 
       <form className="card stack" action={saveSettings}>
         <h2>Settings</h2>

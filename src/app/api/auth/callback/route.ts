@@ -3,6 +3,7 @@ import { GOOGLE_SCOPES, config } from "@/lib/config";
 import { safeEqual, verify } from "@/lib/crypto";
 import { exchangeCode, userEmail } from "@/lib/google";
 import { saveAccount } from "@/lib/accounts";
+import { getSettings } from "@/lib/eventTypes";
 import { currentUser, startSession } from "@/lib/session";
 import { SignupFullError, userForLogin } from "@/lib/users";
 
@@ -47,10 +48,10 @@ export async function GET(req: NextRequest) {
       if (!user) {
         return fail(`There is no PlayDate account for ${email}. Sign up first, or sign in with the account you signed up with.`);
       }
-      const isNew = Date.now() - new Date(user.created_at).getTime() < 60_000;
       await saveAccount(user.id, email, tokens);
       await startSession(email);
-      const res = NextResponse.redirect(new URL(isNew ? "/dashboard/calendars?welcome=1" : "/dashboard", config.appUrl));
+      const answered = !!(await getSettings(user.id)).favorite_show;
+      const res = NextResponse.redirect(new URL(answered ? "/dashboard" : "/dashboard/welcome", config.appUrl));
       res.cookies.delete("sched_oauth");
       return res;
     }

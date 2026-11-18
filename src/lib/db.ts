@@ -126,6 +126,8 @@ create table if not exists user_settings (
   booking_calendar_id text
 );
 alter table settings add column if not exists signup_limit int not null default 5;
+alter table user_settings add column if not exists vibe text not null default 'mall';
+alter table user_settings add column if not exists favorite_show text not null default '';
 
 alter table accounts add column if not exists user_id int references users(id) on delete cascade;
 alter table accounts drop constraint if exists accounts_email_key;

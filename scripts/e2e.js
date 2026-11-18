@@ -22,14 +22,14 @@ const set = (q) => fetch(`${FAKE}/__set?${q}`);
   await set("email=dan@work.test");
   await owner.goto(`${APP}/login`);
   await owner.click("text=Sign in with Google");
-  await owner.waitForURL(`${APP}/dashboard`);
-  check(owner.url().endsWith("/dashboard"), "owner signs in with Google and lands on dashboard");
+  await owner.waitForURL(/\/dashboard\/welcome/);
+  check(true, "owner signs in with Google and is asked their favorite show first");
 
   // Wrong account is refused
   const intruder = await browser.newPage();
   await set("email=someone@else.test");
   await intruder.goto(`${APP}/api/auth/google?mode=login`);
-  check((await intruder.textContent("body")).includes("not allowed"), "non-owner Google account is refused");
+  check((await intruder.textContent("body")).includes("no PlayDate account"), "Google account without a PlayDate account is refused");
 
   // 2. Calendars page; connect a second account
   await owner.goto(`${APP}/dashboard/calendars`);
@@ -222,6 +222,119 @@ const set = (q) => fetch(`${FAKE}/__set?${q}`);
   await owner.waitForURL(/error=/);
   check((await owner.textContent("body")).includes("Site walk"), "cannot disconnect an account a link books onto");
 
+  // 10c. Owner answers the favorite-show question; the whole site takes on the vibe
+  await owner.goto(`${APP}/dashboard/welcome`);
+  await owner.fill("#favorite_show", "DarkWing Duck");
+  await owner.click("text=Show me my vibe");
+  await owner.waitForURL(/step=vibe/);
+  check((await owner.textContent("body")).includes("Night Patrol"), "owner's favorite show maps to the Night Patrol vibe");
+  await owner.click("text=Looks good, keep going");
+  await owner.waitForURL(/calendars/);
+  const homeVibe = await browser.newPage();
+  await homeVibe.goto(`${APP}/`);
+  check((await homeVibe.getAttribute("body", "class")) === "vibe-night-patrol", "homepage uses the owner's vibe");
+  check((await homeVibe.locator(".quote-line").count()) === 1, "homepage shows a rotating 80s quote");
+  const q1 = await homeVibe.textContent(".quote-line");
+  await homeVibe.click("text=Another one");
+  check((await homeVibe.textContent(".quote-line")) !== q1, "quote changes on demand");
+  await homeVibe.screenshot({ path: `${OUT}/shot-home-night.png` });
+  const introVibe = await browser.newPage({ viewport: { width: 1100, height: 760 } });
+  await introVibe.goto(`${APP}/intro`);
+  await introVibe.waitForSelector(".day");
+  check(await introVibe.locator(".vibe-page.vibe-night-patrol").count() === 1, "owner's booking page uses Night Patrol");
+  check(!/darkwing|duck/i.test(await introVibe.textContent("body")), "guest page never names the show");
+  await introVibe.waitForSelector(".time", { timeout: 15000 }).catch(() => {});
+  await introVibe.screenshot({ path: `${OUT}/shot-intro-night.png` });
+  const csStill = await browser.newPage();
+  await csStill.goto(`${APP}/cedarstone`);
+  check(await csStill.locator(".theme-brand").count() === 1 && !/Signal|moment/i.test(await csStill.textContent("body")), "CedarStone link keeps its company branding");
+
+  // 10d. A second person signs up (early spot) and gets a fully separate PlayDate
+  await set("email=jordan@x.test");
+  const jctx = await browser.newContext({ viewport: { width: 1200, height: 900 } });
+  const jp = await jctx.newPage();
+  await jp.goto(`${APP}/signup`);
+  check((await jp.textContent("body")).includes("of 5 early spots left"), "sign-up page shows open early spots");
+  check((await jp.locator("text=Buy me a coffee").count()) === 0, "no coffee button for early sign-ups");
+  await jp.click("text=Sign up with Google");
+  await jp.waitForURL(/dashboard\/welcome/);
+  check(true, "new user lands on the favorite-show question");
+  await jp.fill("#favorite_show", "Knight Rider");
+  await jp.click("text=Show me my vibe");
+  await jp.waitForURL(/step=vibe/);
+  check((await jp.textContent("body")).includes("Night Drive"), "new user's show maps to a vibe (Night Drive)");
+  await jp.click("text=Looks good, keep going");
+  await jp.waitForURL(/welcome=1/);
+  await jp.screenshot({ path: `${OUT}/shot-new-user-dashboard.png`, fullPage: true });
+  const jcal = await jp.textContent("body");
+  check(jcal.includes("jordan@x.test") && !jcal.includes("dan@work.test") && !jcal.includes("dan@personal.test"), "new user sees only their own Google accounts");
+  await jp.goto(`${APP}/dashboard/event-types/new`);
+  await jp.fill("#title", "Hangout");
+  await jp.fill("#slug", "intro");
+  await jp.click("button:has-text('Save')");
+  await jp.waitForURL(/event-types\?saved=1/);
+  const jlinks = await jp.innerText("main"); // visible text only
+  check(jlinks.includes("/jordan/intro"), "new user's link lives at /jordan/intro (same name as owner's is fine)");
+  check(!jlinks.includes("Site walk") && !jlinks.includes("Intro call"), "new user does not see the owner's links");
+  await jp.goto(`${APP}/dashboard`);
+  check(!(await jp.textContent("body")).includes("Riley") && !(await jp.textContent("body")).includes("Casey"), "new user does not see the owner's bookings");
+  for (const path of ["/dashboard/event-types/1", "/dashboard/users", "/dashboard/waitlist"]) {
+    await jp.goto(`${APP}${path}`);
+    check((await jp.textContent("body")).includes("Wrong number"), `new user is blocked from ${path}`);
+  }
+  check((await jp.evaluate(() => fetch("/api/waitlist/export").then((r) => r.status))) === 404, "new user cannot export the waitlist");
+  // Raw HTML (including hidden page data) must never contain the owner's details
+  const ownerData = ["Site walk", "Riley Retailer", "riley@shop.test", "Casey Client", "casey@co.test", "dan@work.test", "dan@personal.test", "Interested in stocking"];
+  for (const path of ["/dashboard", "/dashboard/event-types", "/dashboard/calendars", "/dashboard/event-types/new", "/dashboard/welcome"]) {
+    const html = await (await jp.request.get(`${APP}${path}`)).text();
+    const hits = ownerData.filter((w) => html.includes(w));
+    check(hits.length === 0, `no owner data in new user's raw ${path}${hits.length ? ` (found ${hits.join(", ")})` : ""}`);
+  }
+  // Availability is per person: Jordan's busy time does not block Dan, and vice versa
+  await fetch(`${FAKE}/__seed`, { method: "POST", body: JSON.stringify({ calendarId: "jordan@x.test", start: tue.set({ hour: 11 }).toISO(), end: tue.set({ hour: 12 }).toISO(), summary: "Jordan busy" }) });
+  const slotsU = async (u, type) => {
+    const r = await fetch(`${APP}/api/slots?${u ? `u=${u}&` : ""}type=${type}&start=${encodeURIComponent(tue.toUTC().toISO())}&end=${encodeURIComponent(tue.plus({ days: 1 }).toUTC().toISO())}`);
+    return (await r.json()).slots.map(local);
+  };
+  const danTue = await slotsU(null, "intro");
+  const jorTue = await slotsU("jordan", "intro");
+  check(danTue.includes("11:00") && !jorTue.includes("11:00"), "one user's busy calendar never blocks another user's page");
+  check(jorTue.includes("09:00"), "owner's bookings do not block the new user's page");
+  const jb = await fetch(`${APP}/api/book`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ u: "jordan", type: "intro", start: (await (await fetch(`${APP}/api/slots?u=jordan&type=intro&start=${encodeURIComponent(tue.toUTC().toISO())}&end=${encodeURIComponent(tue.plus({ days: 1 }).toUTC().toISO())}`)).json()).slots[0], name: "Sam Guest", email: "sam@g.test" }),
+  });
+  check(jb.status === 200, "guest can book the new user's link");
+  const evs4 = await (await fetch(`${FAKE}/__events`)).json();
+  check((evs4["jordan@x.test"] || []).some((e) => e.summary === "Hangout with Sam Guest"), "booking lands on the new user's own calendar");
+  check(!Object.entries(evs4).some(([cal, list]) => !cal.includes("jordan") && list.some((e) => e.summary === "Hangout with Sam Guest")), "and on nobody else's calendar");
+  await owner.goto(`${APP}/dashboard`);
+  check(!(await owner.textContent("body")).includes("Sam Guest"), "owner does not see the new user's bookings");
+  await owner.goto(`${APP}/dashboard/users`);
+  const usersPage = await owner.textContent("body");
+  check(usersPage.includes("jordan@x.test") && usersPage.includes("1 of 5 sign-up spots used"), "owner's Users page lists the new user");
+  const jpage = await browser.newPage();
+  await jpage.goto(`${APP}/jordan/intro`);
+  await jpage.waitForSelector(".day");
+  check(await jpage.locator(".vibe-page.vibe-neon-drive").count() === 1, "new user's public page uses their own vibe");
+  await jpage.waitForSelector(".time", { timeout: 15000 }).catch(() => {});
+  await jpage.screenshot({ path: `${OUT}/shot-jordan-page.png` });
+
+  // 10e. When spots run out, sign-up turns into the waitlist (and direct attempts are refused)
+  await owner.fill("input[name=signup_limit]", "1");
+  await owner.click("form:has(input[name=signup_limit]) button");
+  await owner.waitForURL(/users\?saved=1/);
+  await set("email=late@x.test");
+  const late = await browser.newContext();
+  const lp = await late.newPage();
+  await lp.goto(`${APP}/api/auth/google?mode=signup`);
+  await lp.waitForURL(/signup\?error=/);
+  check((await lp.textContent("body")).includes("spots just filled up"), "direct sign-up is refused when spots are full");
+  check((await lp.locator("#wl-name").count()) === 1, "full sign-up page shows the waitlist form");
+  await lp.goto(`${APP}/api/auth/google?mode=login`);
+  check((await lp.textContent("body")).includes("no PlayDate account"), "unknown Google account cannot sign in");
+
   // 11. Waitlist sign-up
   const visitor = await browser.newPage();
   await visitor.goto(`${APP}/signup`);
@@ -243,6 +356,16 @@ const set = (q) => fetch(`${FAKE}/__set?${q}`);
   check(csv.includes("'=HYPERLINK"), "CSV export neutralizes spreadsheet formulas");
   const anonCsv = await fetch(`${APP}/api/waitlist/export`);
   check(anonCsv.status === 404, "CSV export requires sign-in");
+
+  // 12. Owner removes the new user; their pages stop working
+  await owner.goto(`${APP}/dashboard/users`);
+  owner.once("dialog", (d) => d.accept());
+  await owner.locator("tr", { hasText: "jordan@x.test" }).locator("button:has-text('Remove')").click();
+  await owner.waitForTimeout(800);
+  const gone = await fetch(`${APP}/jordan/intro`);
+  check(gone.status === 404, "removed user's booking page is gone");
+  await jp.goto(`${APP}/dashboard`);
+  check(jp.url().includes("/login"), "removed user is signed out");
 
   // Phone width check
   const phone = await browser.newPage({ viewport: { width: 390, height: 844 } });

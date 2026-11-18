@@ -13,13 +13,24 @@ export default async function Terms() {
           <h1>Terms of service</h1>
           <p className="muted small">Last updated {LEGAL_UPDATED}</p>
           <p>
-            PlayDate is a personal booking page operated by {name}. By booking a time, you agree to these terms.
+            PlayDate is a small booking service operated by {name}. By booking a time or creating an account, you agree
+            to these terms.
           </p>
           <h2>Using PlayDate</h2>
           <ul>
             <li>Book only times you intend to keep, and give accurate contact details.</li>
             <li>Do not use PlayDate to send spam, make automated bookings, or disrupt the service.</li>
             <li>{name} may decline, cancel or reschedule any booking.</li>
+          </ul>
+          <h2>If you have a PlayDate account</h2>
+          <ul>
+            <li>You are responsible for your booking links and for the meetings booked through them.</li>
+            <li>Only connect Google accounts you are allowed to use, and do not use PlayDate for spam or anything unlawful.</li>
+            <li>
+              PlayDate is a small, free service. {name} may change it, limit sign-ups, remove accounts that break these
+              terms, or shut it down, and will try to give notice where possible.
+            </li>
+            <li>You can delete your account at any time from Calendars and settings.</li>
           </ul>
           <h2>Availability</h2>
           <p>

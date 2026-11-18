@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import BookingWidget from "@/components/BookingWidget";
 import Footer from "@/components/Footer";
+import { vibeOrDefault } from "@/lib/vibes";
 import { brandingFor, brandStyle, getEventTypeBySlug, getSettings, locationLabel } from "@/lib/eventTypes";
 
 /** Public booking page, shared by /slug (primary owner) and /handle/slug (everyone else). */
@@ -18,7 +19,10 @@ export default async function BookPage({ handle, slug }: { handle: string | null
   const b = brandingFor(t);
   const branded = b.theme === "brand";
   return (
-    <div className={branded ? "theme-brand" : undefined} style={brandStyle(b) as React.CSSProperties}>
+    <div
+      className={branded ? "theme-brand" : `vibe-page vibe-${vibeOrDefault(s.vibe)}`}
+      style={brandStyle(b) as React.CSSProperties}
+    >
       <main className="container">
         <BookingWidget
           handle={handle}
@@ -33,6 +37,7 @@ export default async function BookPage({ handle, slug }: { handle: string | null
           branded={branded}
           brandName={b.name}
           logoUrl={b.logoUrl}
+          vibe={vibeOrDefault(s.vibe)}
         />
       </main>
       <Footer plain={branded} />

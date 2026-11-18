@@ -8,6 +8,7 @@ import { db } from "@/lib/db";
 import { isHex, RESERVED_SLUGS } from "@/lib/eventTypes";
 import { endSession, requireAdmin, requireUser } from "@/lib/session";
 import { validHandle } from "@/lib/users";
+import { isVibe, matchVibe } from "@/lib/vibes";
 import { parseHHMM, type WeeklyHours } from "@/lib/slots";
 
 const int = (v: FormDataEntryValue | null, min: number, max: number, label: string): number => {
@@ -266,4 +267,31 @@ export async function deleteMyAccount() {
   await sql`delete from users where id = ${me.id} and role = 'user'`;
   await endSession();
   redirect("/");
+}
+
+// ---------- Vibe ----------
+
+export async function saveFavoriteShow(form: FormData) {
+  const me = await requireUser();
+  const show = String(form.get("favorite_show") ?? "").trim().slice(0, 120);
+  if (!show) redirect("/dashboard/welcome?error=" + encodeURIComponent("Tell us a show, any show."));
+  const matched = matchVibe(show);
+  const sql = await db();
+  await sql`
+    insert into user_settings (user_id, favorite_show, vibe) values (${me.id}, ${show}, ${matched ?? "mall"})
+    on conflict (user_id) do update set favorite_show = excluded.favorite_show, vibe = excluded.vibe`;
+  revalidatePath("/", "layout");
+  redirect(`/dashboard/welcome?step=vibe${matched ? "" : "&nomatch=1"}`);
+}
+
+export async function saveVibe(form: FormData) {
+  const me = await requireUser();
+  const vibe = String(form.get("vibe") ?? "");
+  if (!isVibe(vibe)) redirect("/dashboard/calendars?error=" + encodeURIComponent("Pick one of the vibes."));
+  const sql = await db();
+  await sql`
+    insert into user_settings (user_id, vibe) values (${me.id}, ${vibe})
+    on conflict (user_id) do update set vibe = excluded.vibe`;
+  revalidatePath("/", "layout");
+  redirect(String(form.get("next") ?? "") === "welcome" ? "/dashboard/calendars?welcome=1" : "/dashboard/calendars?saved=1");
 }

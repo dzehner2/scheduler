@@ -1,6 +1,7 @@
 "use client";
 import { DateTime } from "luxon";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { VIBES, type VibeId } from "@/lib/vibes";
 
 interface Props {
   /** null for the primary owner's root links */
@@ -16,19 +17,18 @@ interface Props {
   branded?: boolean;
   brandName?: string;
   logoUrl?: string;
+  vibe?: VibeId;
 }
 
-const PLAYDATE_COPY = {
-  pick: "Pick a time to come over",
+const BASE_COPY = {
   loading: "Ringing the calendar...",
   empty: "Nobody's home this week. Try the next one.",
   details: "Who's calling?",
   submit: "Lock it in",
   submitting: "Dialing...",
-  done: "It's a play date!",
   doneNote: "See you then. A calendar invitation is on its way to your inbox.",
 };
-const BRAND_COPY: typeof PLAYDATE_COPY = {
+const BRAND_COPY = {
   pick: "Select a date and time",
   loading: "Checking availability...",
   empty: "No open times this week. Try the next week.",
@@ -42,7 +42,8 @@ const BRAND_COPY: typeof PLAYDATE_COPY = {
 type Step = "pick" | "form" | "done";
 
 export default function BookingWidget(p: Props) {
-  const C = p.branded ? BRAND_COPY : PLAYDATE_COPY;
+  const v = VIBES[p.vibe ?? "mall"];
+  const C = p.branded ? BRAND_COPY : { ...BASE_COPY, pick: v.pick, done: v.done };
   const [zone, setZone] = useState<string>("UTC");
   const [zones, setZones] = useState<string[]>([]);
   const [weekStart, setWeekStart] = useState<DateTime | null>(null);
@@ -170,7 +171,7 @@ export default function BookingWidget(p: Props) {
           <br />
           {p.location}
         </p>
-        {!p.branded && <p className="tagline">Like ringing the landline, minus the busy signal.</p>}
+        {!p.branded && <p className="tagline">{v.tagline}</p>}
         {p.description && <p style={{ whiteSpace: "pre-wrap" }}>{p.description}</p>}
         {slot && step !== "pick" && <p><strong>{fmtFull(slot)}</strong></p>}
       </div>

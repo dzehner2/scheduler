@@ -2,13 +2,10 @@ import Link from "next/link";
 import Footer from "@/components/Footer";
 import Logo from "@/components/Logo";
 import QuoteRotator from "@/components/QuoteRotator";
-import { siteOperator } from "@/lib/site";
 
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
-  const { name } = await siteOperator();
-  const whose = name === "the owner of this site" ? "the owner's" : `${name}'s`;
   return (
     <>
       <main className="container narrow">
@@ -23,13 +20,13 @@ export default async function Home() {
             <strong>PlayDate is like that.</strong> Pick a time that works, and come on over.
           </p>
           <p>
-            It checks {whose} Google calendars, across several Google accounts, and only offers times when the line
-            is free. Once you pick one, a calendar invitation lands in your inbox.
+            PlayDate checks all of your calendars, across all of your Google accounts, and only offers times when
+            the line is free. Share one link, and when someone picks a time, the invitation lands in both inboxes.
           </p>
           <p className="muted">Got a link from someone? Use that link to pick a time. This page doesn&apos;t list them.</p>
           <p className="small">
             <Link href="/privacy">Privacy policy</Link> · <Link href="/terms">Terms of service</Link> · <Link href="/signup">Get your own PlayDate</Link> ·{" "}
-            <Link href="/login">Owner sign in</Link>
+            <Link href="/login">Sign in</Link>
           </p>
         </div>
       </main>
